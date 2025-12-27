@@ -59,6 +59,12 @@ def get_chaos_config():
 def update_chaos_config(config: ChaosConfig):
     global chaos_config
     chaos_config = config
+    prometheus_metrics.record_config_update()
+    return {"message": "Chaos config updated", "config": chaos_config.dict()}
+
+@app.post("/chaos/inject/latency")
+def inject_latency(min_ms: int = 100, max_ms: int = 1000):
+    """Inject latency delay"""
     start_time = time.time()
     
     if not CHAOS_ENABLED:
@@ -88,6 +94,18 @@ def update_chaos_config(config: ChaosConfig):
         method='POST', endpoint='/chaos/inject/latency', status='200'
     ).inc()
     prometheus_metrics.request_duration_seconds.labels(
+        method='POST', endpoint='/chaos/inject/latency'
+    ).observe(duration)
+    
+    return {
+        "chaos_type": "latency",
+        "delay_ms": delay_ms,
+        "message": f"Injected {delay_ms}ms latency"
+    }
+
+@app.post("/chaos/inject/error")
+def inject_error(error_code: int = 500, message: str = "Chaos-induced error"):
+    """Inject an error response"""
     start_time = time.time()
     
     if not CHAOS_ENABLED:
@@ -114,27 +132,7 @@ def update_chaos_config(config: ChaosConfig):
     ).inc()
     prometheus_metrics.request_duration_seconds.labels(
         method='POST', endpoint='/chaos/inject/error'
-    ).observe(duration   'details': f'Injected {delay_ms}ms delay',
-        'timestamp': datetime.utcnow().isoformat()
-    })
-    
-    return {
-        "chaos_type": "latency",
-        "delay_ms": delay_ms,
-        "message": f"Injected {delay_ms}ms latency"
-    }
-
-@app.post("/chaos/inject/error")
-def inject_error(error_code: int = 500, message: str = "Chaos-induced error"):
-    """Inject an error response"""
-    if not CHAOS_ENABLED:
-        return {"message": "Chaos is disabled"}
-    
-    publish_event('chaos.injected', {
-        'chaos_type': 'error',
-        'details': f'HTTP {error_code}: {message}',
-        'timestamp': datetime.utcnow().isoformat()
-    })
+    ).observe(duration)
     
     raise HTTPException(status_code=error_code, detail=message)
 

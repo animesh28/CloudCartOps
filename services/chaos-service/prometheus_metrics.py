@@ -66,23 +66,6 @@ error_injections_total = Counter(
     registry=registry
 )
 
-def get_metrics():
-    """Generate Prometheus metrics in text format"""
-    return generate_latest(registry)
-
-def get_content_type():
-    """Return the content type for Prometheus metrics"""
-    return CONTENT_TYPE_LATEST
-    'Total latency chaos injections',
-    registry=registry
-)
-
-error_injections_total = Counter(
-    'error_injections_total',
-    'Total error chaos injections',
-    registry=registry
-)
-
 timeout_injections_total = Counter(
     'timeout_injections_total',
     'Total timeout chaos injections',
@@ -188,3 +171,11 @@ def record_kafka_publish(event_type, success=True, latency=0):
 def set_uptime(seconds):
     """Set service uptime"""
     uptime_seconds.set(seconds)
+
+def get_metrics():
+    """Generate Prometheus metrics in text format"""
+    return generate_latest(registry)
+
+def get_content_type():
+    """Return the content type for Prometheus metrics"""
+    return CONTENT_TYPE_LATEST

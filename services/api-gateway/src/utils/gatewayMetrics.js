@@ -112,9 +112,3 @@ module.exports = {
     cacheMissRate.inc();
   }
 };
-      cacheMissRate,
-      requestPayloadSize,
-      responsePayloadSize
-    ];
-  }
-};
