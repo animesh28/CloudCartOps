@@ -1,127 +1,135 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Box,
+  Typography,
+  Tabs,
+  Tab,
+  Paper,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  TextField,
+  Grid,
+  Card,
+  CardContent,
+  Alert,
+  CircularProgress,
+} from '@mui/material';
+import {
+  Refresh,
+  LocalShipping,
+  Inventory2,
+  AdminPanelSettings,
+  People,
+  Science,
+} from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 import { API_URL } from '../api/api';
 
+function TabPanel({ children, value, index, ...other }) {
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`admin-tabpanel-${index}`}
+      aria-labelledby={`admin-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
+
 function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = useState(0);
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // Check if user is admin (from backend is_admin field)
   const isAdmin = user?.is_admin === true;
 
   if (!isAdmin) {
     return (
-      <div className="container" style={{ textAlign: 'center', marginTop: '2rem' }}>
-        <h2>Access Denied</h2>
-        <p>You don't have permission to access the admin panel</p>
-        <button 
-          onClick={() => navigate('/')}
-          className="btn btn-primary"
-          style={{ marginTop: '1rem' }}
-        >
+      <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
+        <AdminPanelSettings sx={{ fontSize: 80, color: 'error.main', mb: 2 }} />
+        <Typography variant="h4" gutterBottom fontWeight={700}>
+          Access Denied
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+          You don't have permission to access the admin panel
+        </Typography>
+        <Button variant="contained" onClick={() => navigate('/')}>
           Go Back Home
-        </button>
-      </div>
+        </Button>
+      </Container>
     );
   }
 
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
-      {/* Admin Header */}
-      <div style={{
-        backgroundColor: '#2c3e50',
-        color: 'white',
-        padding: '1.5rem',
-        marginBottom: '2rem'
-      }}>
-        <div className="container">
-          <h1 style={{ margin: '0 0 0.5rem 0' }}>🔧 Admin Dashboard</h1>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>Welcome, {user?.username || 'Admin'}</p>
-        </div>
-      </div>
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
+      <Box sx={{ bgcolor: 'primary.main', color: 'white', py: 3, mb: 3 }}>
+        <Container maxWidth="xl">
+          <Typography variant="h3" fontWeight={700} gutterBottom>
+            <AdminPanelSettings sx={{ fontSize: 40, mr: 1, verticalAlign: 'middle' }} />
+            Admin Dashboard
+          </Typography>
+          <Typography variant="body1">
+            Welcome, {user?.username || 'Admin'}
+          </Typography>
+        </Container>
+      </Box>
 
-      <div className="container">
-        {/* Tab Navigation */}
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          marginBottom: '2rem',
-          borderBottom: '2px solid #ecf0f1',
-          flexWrap: 'wrap'
-        }}>
-          <button
-            onClick={() => setActiveTab('orders')}
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: activeTab === 'orders' ? '#3498db' : 'transparent',
-              color: activeTab === 'orders' ? 'white' : '#2c3e50',
-              border: 'none',
-              borderBottom: activeTab === 'orders' ? '3px solid #3498db' : 'none',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '1rem'
+      <Container maxWidth="xl">
+        <Paper elevation={2} sx={{ borderRadius: 2 }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              borderBottom: 1,
+              borderColor: 'divider',
+              '& .MuiTab-root': {
+                minHeight: 64,
+                fontWeight: 600,
+              },
             }}
           >
-            📦 Orders
-          </button>
-          <button
-            onClick={() => setActiveTab('inventory')}
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: activeTab === 'inventory' ? '#3498db' : 'transparent',
-              color: activeTab === 'inventory' ? 'white' : '#2c3e50',
-              border: 'none',
-              borderBottom: activeTab === 'inventory' ? '3px solid #3498db' : 'none',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '1rem'
-            }}
-          >
-            📊 Inventory
-          </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: activeTab === 'users' ? '#3498db' : 'transparent',
-              color: activeTab === 'users' ? 'white' : '#2c3e50',
-              border: 'none',
-              borderBottom: activeTab === 'users' ? '3px solid #3498db' : 'none',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '1rem'
-            }}
-          >
-            👥 Users
-          </button>
-          <button
-            onClick={() => setActiveTab('chaos')}
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: activeTab === 'chaos' ? '#e74c3c' : 'transparent',
-              color: activeTab === 'chaos' ? 'white' : '#2c3e50',
-              border: 'none',
-              borderBottom: activeTab === 'chaos' ? '3px solid #e74c3c' : 'none',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '1rem'
-            }}
-          >
-            ⚡ Chaos Engineering
-          </button>
-        </div>
+            <Tab label="Orders" icon={<LocalShipping />} iconPosition="start" />
+            <Tab label="Inventory" icon={<Inventory2 />} iconPosition="start" />
+            <Tab label="Users" icon={<People />} iconPosition="start" />
+            <Tab label="Chaos Engineering" icon={<Science />} iconPosition="start" />
+          </Tabs>
 
-        {/* Tab Content */}
-        {activeTab === 'orders' && <AdminOrders />}
-        {activeTab === 'inventory' && <AdminInventory />}
-        {activeTab === 'users' && <AdminUsers />}
-        {activeTab === 'chaos' && <ChaosEngineering />}
-      </div>
-    </div>
+          <TabPanel value={activeTab} index={0}>
+            <AdminOrders />
+          </TabPanel>
+          <TabPanel value={activeTab} index={1}>
+            <AdminInventory />
+          </TabPanel>
+          <TabPanel value={activeTab} index={2}>
+            <AdminUsers />
+          </TabPanel>
+          <TabPanel value={activeTab} index={3}>
+            <ChaosEngineering />
+          </TabPanel>
+        </Paper>
+      </Container>
+    </Box>
   );
 }
+
 
 function AdminOrders() {
   const [orders, setOrders] = useState([]);
@@ -136,20 +144,14 @@ function AdminOrders() {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/orders`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch orders');
+      if (response.ok) {
+        const data = await response.json();
+        setOrders(data || []);
       }
-
-      const data = await response.json();
-      setOrders(data || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      alert('Failed to load orders. Make sure the backend is running.');
     } finally {
       setLoading(false);
     }
@@ -170,49 +172,22 @@ function AdminOrders() {
       if (response.ok) {
         const updated = await response.json();
         setOrders(orders.map(o => o.id === orderId ? updated : o));
-        
-        // Show success message based on status change
-        const statusMessages = {
-          'shipped': 'Order marked as shipped - customer notified',
-          'delivered': 'Order marked as delivered - customer notified',
-          'returned': 'Order marked as returned',
-          'confirmed': 'Order confirmed',
-          'cancelled': 'Order cancelled'
-        };
-        
-        alert(statusMessages[newStatus] || 'Order status updated successfully');
-      } else {
-        const error = await response.json();
-        alert('Failed to update order: ' + (error.error || error.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error updating order:', error);
-      alert('Failed to update order status');
     }
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      awaiting_payment: '#f39c12',
-      confirmed: '#27ae60',
-      shipped: '#3498db',
-      delivered: '#2ecc71',
-      cancelled: '#e74c3c',
-      returned: '#95a5a6'
+      awaiting_payment: 'warning',
+      confirmed: 'success',
+      shipped: 'info',
+      delivered: 'success',
+      cancelled: 'error',
+      returned: 'default'
     };
-    return colors[status] || '#95a5a6';
-  };
-
-  const getStatusEmoji = (status) => {
-    const emojis = {
-      awaiting_payment: '⏳',
-      confirmed: '✅',
-      shipped: '📦',
-      delivered: '🎉',
-      cancelled: '❌',
-      returned: '↩️'
-    };
-    return emojis[status] || '📋';
+    return colors[status] || 'default';
   };
 
   const getNextStatus = (currentStatus) => {
@@ -227,93 +202,81 @@ function AdminOrders() {
     return transitions[currentStatus] || [];
   };
 
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h2>All Orders</h2>
-        <button 
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h5" fontWeight={700}>
+          All Orders
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<Refresh />}
           onClick={fetchAllOrders}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: '#3498db',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
         >
-          🔄 Refresh
-        </button>
-      </div>
+          Refresh
+        </Button>
+      </Box>
 
-      {loading ? (
-        <p>Loading orders...</p>
-      ) : orders.length === 0 ? (
-        <p>No orders found. Make sure the backend is running.</p>
+      {orders.length === 0 ? (
+        <Alert severity="info">No orders found</Alert>
       ) : (
-        <div style={{ display: 'grid', gap: '1.5rem' }}>
-          {orders.map(order => (
-            <div key={order.id} style={{
-              backgroundColor: 'white',
-              padding: '1.5rem',
-              borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              borderLeft: `4px solid ${getStatusColor(order.status)}`
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                <div>
-                  <h3 style={{ margin: '0 0 0.5rem 0' }}>Order #{order.id}</h3>
-                  <p style={{ color: '#7f8c8d', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>
-                    User ID: {order.user_id} | Total: ${order.total_amount.toFixed(2)}
-                  </p>
-                  <p style={{ color: '#7f8c8d', fontSize: '0.85rem', margin: 0 }}>
-                    Items: {order.items?.length || 0}
-                  </p>
-                </div>
-                <span style={{
-                  backgroundColor: getStatusColor(order.status),
-                  color: 'white',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '20px',
-                  fontWeight: '600',
-                  fontSize: '0.9rem'
-                }}>
-                  {getStatusEmoji(order.status)} {order.status.replace('_', ' ').toUpperCase()}
-                </span>
-              </div>
+        <Grid container spacing={2}>
+          {orders.map((order) => (
+            <Grid item xs={12} key={order.id}>
+              <Card elevation={1}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Box>
+                      <Typography variant="h6" fontWeight={700}>
+                        Order #{order.id}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        User ID: {order.user_id} | Total: ${order.total_amount.toFixed(2)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Items: {order.items?.length || 0}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={order.status.replace('_', ' ').toUpperCase()}
+                      color={getStatusColor(order.status)}
+                      size="medium"
+                    />
+                  </Box>
 
-              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #ecf0f1' }}>
-                <p style={{ fontWeight: '600', marginBottom: '0.75rem' }}>Update Status:</p>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {getNextStatus(order.status).map(status => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusUpdate(order.id, status)}
-                      style={{
-                        padding: '0.5rem 0.75rem',
-                        backgroundColor: '#3498db',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: '500',
-                        fontSize: '0.85rem'
-                      }}
-                    >
-                      {status === 'shipped' && '📦 Shipped'}
-                      {status === 'delivered' && '🎉 Delivered'}
-                      {status === 'returned' && '↩️ Returned'}
-                      {status === 'confirmed' && '✅ Confirm'}
-                      {status === 'cancelled' && '❌ Cancel'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+                  {getNextStatus(order.status).length > 0 && (
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {getNextStatus(order.status).map((status) => (
+                        <Button
+                          key={status}
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handleStatusUpdate(order.id, status)}
+                        >
+                          {status === 'shipped' && '📦 Ship'}
+                          {status === 'delivered' && '✓ Deliver'}
+                          {status === 'returned' && '↩ Return'}
+                          {status === 'confirmed' && '✓ Confirm'}
+                          {status === 'cancelled' && '✗ Cancel'}
+                        </Button>
+                      ))}
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
           ))}
-        </div>
+        </Grid>
       )}
-    </div>
+    </Box>
   );
 }
 
@@ -330,11 +293,10 @@ function AdminInventory() {
     try {
       const response = await fetch(`${API_URL}/api/products`);
       const data = await response.json();
-      // Sort by stock level
       setProducts(data.sort((a, b) => a.stock - b.stock));
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching products:', error);
+    } finally {
       setLoading(false);
     }
   };
@@ -343,96 +305,79 @@ function AdminInventory() {
     try {
       const response = await fetch(`${API_URL}/api/products/${productId}/stock`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stock: parseInt(newStock) })
       });
 
       if (response.ok) {
         const updated = await response.json();
         setProducts(products.map(p => p.id === productId ? updated : p));
-        alert('Stock updated successfully');
       }
     } catch (error) {
-      alert('Failed to update stock');
+      console.error('Error updating stock:', error);
     }
   };
 
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <div>
-      <h2 style={{ marginBottom: '1.5rem' }}>Inventory Management</h2>
-      
-      {loading ? (
-        <p>Loading inventory...</p>
-      ) : (
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse'
-          }}>
-            <thead style={{ backgroundColor: '#34495e', color: 'white' }}>
-              <tr>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Product</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Category</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Current Stock</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Status</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product, idx) => (
-                <tr key={product.id} style={{
-                  borderBottom: '1px solid #ecf0f1',
-                  backgroundColor: idx % 2 === 0 ? '#f8f9fa' : 'white'
-                }}>
-                  <td style={{ padding: '1rem' }}>
-                    <strong>{product.name}</strong>
-                  </td>
-                  <td style={{ padding: '1rem' }}>{product.category}</td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    <span style={{
-                      backgroundColor: product.stock < 10 ? '#e74c3c' : product.stock < 50 ? '#f39c12' : '#27ae60',
-                      color: 'white',
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '12px',
-                      fontWeight: '600'
-                    }}>
-                      {product.stock}
-                    </span>
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
-                    {product.stock < 10 && '🔴 Critical'}
-                    {product.stock >= 10 && product.stock < 50 && '🟡 Low'}
-                    {product.stock >= 50 && '🟢 Healthy'}
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    <input
-                      type="number"
-                      defaultValue={product.stock}
-                      min="0"
-                      style={{
-                        width: '70px',
-                        padding: '0.5rem',
-                        borderRadius: '4px',
-                        border: '1px solid #bdc3c7',
-                        marginRight: '0.5rem'
-                      }}
-                      onBlur={(e) => updateStock(product.id, e.target.value)}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+    <Box>
+      <Typography variant="h5" fontWeight={700} sx={{ mb: 3 }}>
+        Inventory Management
+      </Typography>
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'primary.main' }}>
+              <TableCell sx={{ color: 'white', fontWeight: 600 }}>Product</TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 600 }}>Category</TableCell>
+              <TableCell align="center" sx={{ color: 'white', fontWeight: 600 }}>Current Stock</TableCell>
+              <TableCell align="center" sx={{ color: 'white', fontWeight: 600 }}>Status</TableCell>
+              <TableCell align="center" sx={{ color: 'white', fontWeight: 600 }}>Action</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {products.map((product) => (
+              <TableRow key={product.id} hover>
+                <TableCell>
+                  <Typography fontWeight={600}>{product.name}</Typography>
+                </TableCell>
+                <TableCell>{product.category}</TableCell>
+                <TableCell align="center">
+                  <Chip
+                    label={product.stock}
+                    color={product.stock < 10 ? 'error' : product.stock < 50 ? 'warning' : 'success'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell align="center">
+                  {product.stock < 10 && '🔴 Critical'}
+                  {product.stock >= 10 && product.stock < 50 && '🟡 Low'}
+                  {product.stock >= 50 && '🟢 Healthy'}
+                </TableCell>
+                <TableCell align="center">
+                  <TextField
+                    type="number"
+                    defaultValue={product.stock}
+                    size="small"
+                    sx={{ width: 100 }}
+                    inputProps={{ min: 0 }}
+                    onBlur={(e) => updateStock(product.id, e.target.value)}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 }
 
@@ -449,67 +394,66 @@ function AdminUsers() {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/users`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
       setUsers(data);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching users:', error);
+    } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div>
-      <h2 style={{ marginBottom: '1.5rem' }}>User Management</h2>
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-      {loading ? (
-        <p>Loading users...</p>
-      ) : users.length === 0 ? (
-        <p>No users found</p>
+  return (
+    <Box>
+      <Typography variant="h5" fontWeight={700} sx={{ mb: 3 }}>
+        User Management
+      </Typography>
+
+      {users.length === 0 ? (
+        <Alert severity="info">No users found</Alert>
       ) : (
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse'
-          }}>
-            <thead style={{ backgroundColor: '#34495e', color: 'white' }}>
-              <tr>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>ID</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Username</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Email</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Full Name</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Joined</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user, idx) => (
-                <tr key={user.id} style={{
-                  borderBottom: '1px solid #ecf0f1',
-                  backgroundColor: idx % 2 === 0 ? '#f8f9fa' : 'white'
-                }}>
-                  <td style={{ padding: '1rem' }}>{user.id}</td>
-                  <td style={{ padding: '1rem' }}><strong>{user.username}</strong></td>
-                  <td style={{ padding: '1rem' }}>{user.email}</td>
-                  <td style={{ padding: '1rem' }}>{user.full_name}</td>
-                  <td style={{ padding: '1rem', fontSize: '0.9rem', color: '#7f8c8d' }}>
-                    {new Date(user.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'primary.main' }}>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>ID</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Username</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Email</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Full Name</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Joined</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id} hover>
+                  <TableCell>{user.id}</TableCell>
+                  <TableCell>
+                    <Typography fontWeight={600}>{user.username}</Typography>
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.full_name}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+    </Box>
   );
 }
 

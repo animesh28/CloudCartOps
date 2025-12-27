@@ -1,5 +1,29 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Typography,
+  Box,
+  Button,
+  Paper,
+  Chip,
+  CircularProgress,
+  Stepper,
+  Step,
+  StepLabel,
+  Alert,
+  Divider,
+  Grid,
+} from '@mui/material';
+import {
+  Payment,
+  Cancel,
+  ShoppingBag,
+  LocalShipping,
+  CheckCircle,
+  Schedule,
+  Undo,
+} from '@mui/icons-material';
 import { ordersAPI } from '../api/api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -36,7 +60,6 @@ function Orders() {
       setProcessingPayment(orderId);
       const response = await ordersAPI.processPayment(orderId, { payment_method: 'credit_card' });
       
-      // Update the order in the list
       setOrders(orders.map(order => 
         order.id === orderId ? response.data : order
       ));
@@ -44,7 +67,6 @@ function Orders() {
       setProcessingPayment(null);
     } catch (error) {
       console.error('Error processing payment:', error);
-      alert('Failed to process payment');
       setProcessingPayment(null);
     }
   };
@@ -54,7 +76,6 @@ function Orders() {
       setUpdatingOrderId(orderId);
       const response = await ordersAPI.updateOrderStatus(orderId, { status: newStatus });
       
-      // Update the order in the list
       setOrders(orders.map(order => 
         order.id === orderId ? response.data : order
       ));
@@ -62,182 +83,204 @@ function Orders() {
       setUpdatingOrderId(null);
     } catch (error) {
       console.error('Error updating order status:', error);
-      alert('Failed to update order status: ' + (error.response?.data?.message || error.message));
       setUpdatingOrderId(null);
     }
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      awaiting_payment: '#f39c12',
-      confirmed: '#27ae60',
-      shipped: '#3498db',
-      delivered: '#2ecc71',
-      cancelled: '#e74c3c',
-      returned: '#95a5a6'
+      awaiting_payment: 'warning',
+      confirmed: 'success',
+      shipped: 'info',
+      delivered: 'success',
+      cancelled: 'error',
+      returned: 'default'
     };
-    return colors[status] || '#95a5a6';
+    return colors[status] || 'default';
   };
 
-  const getStatusEmoji = (status) => {
-    const emojis = {
-      awaiting_payment: '⏳',
-      confirmed: '✅',
-      shipped: '📦',
-      delivered: '🎉',
-      cancelled: '❌',
-      returned: '↩️'
+  const getStatusIcon = (status) => {
+    const icons = {
+      awaiting_payment: <Schedule />,
+      confirmed: <CheckCircle />,
+      shipped: <LocalShipping />,
+      delivered: <CheckCircle />,
+      cancelled: <Cancel />,
+      returned: <Undo />
     };
-    return emojis[status] || '📋';
+    return icons[status] || <ShoppingBag />;
+  };
+
+  const getOrderSteps = (status) => {
+    const steps = ['Order Placed', 'Payment', 'Confirmed', 'Shipped', 'Delivered'];
+    let activeStep = 0;
+    
+    if (status === 'awaiting_payment') activeStep = 0;
+    else if (status === 'confirmed') activeStep = 2;
+    else if (status === 'shipped') activeStep = 3;
+    else if (status === 'delivered') activeStep = 4;
+    else if (status === 'cancelled' || status === 'returned') activeStep = -1;
+    
+    return { steps, activeStep };
   };
 
   const getUserAllowedActions = (currentStatus) => {
-    // Regular users can only cancel orders (except terminal states)
     const cancellableStates = ['awaiting_payment', 'confirmed', 'shipped'];
     return cancellableStates.includes(currentStatus) ? ['cancelled'] : [];
   };
 
   if (loading) {
-    return <div className="loading">Loading orders...</div>;
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '60vh',
+        }}
+      >
+        <CircularProgress size={60} />
+      </Box>
+    );
   }
 
   if (orders.length === 0) {
     return (
-      <div className="container">
-        <div className="empty-state">
-          <h2>No orders yet</h2>
-          <p>Start shopping to see your orders here</p>
-          <button onClick={() => navigate('/')} className="btn btn-primary">
-            Browse Products
-          </button>
-        </div>
-      </div>
+      <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
+        <ShoppingBag sx={{ fontSize: 100, color: 'text.secondary', mb: 2 }} />
+        <Typography variant="h4" gutterBottom fontWeight={700}>
+          No orders yet
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+          Start shopping to see your orders here
+        </Typography>
+        <Button
+          variant="contained"
+          size="large"
+          onClick={() => navigate('/')}
+          startIcon={<ShoppingBag />}
+        >
+          Browse Products
+        </Button>
+      </Container>
     );
   }
 
   return (
-    <div className="container">
-      <h1>My Orders</h1>
-      <div className="orders-list">
-        {orders.map(order => (
-          <div key={order.id} className="order-card" style={{ borderLeft: `4px solid ${getStatusColor(order.status)}` }}>
-            <div className="order-header">
-              <div>
-                <h3>Order #{order.id}</h3>
-                <p style={{ color: '#7f8c8d', marginTop: '0.5rem' }}>
-                  Placed on {new Date(order.created_at).toLocaleDateString()}
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{
-                  backgroundColor: getStatusColor(order.status),
-                  color: 'white',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '20px',
-                  fontWeight: '600',
-                  fontSize: '0.9rem'
-                }}>
-                  {getStatusEmoji(order.status)} {order.status.replace('_', ' ').toUpperCase()}
-                </span>
-              </div>
-            </div>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Typography variant="h3" component="h1" gutterBottom fontWeight={700}>
+        My Orders
+      </Typography>
 
-            <div style={{ marginTop: '1rem' }}>
-              <p style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                Total: ${order.total_amount.toFixed(2)}
-              </p>
-              {order.items && order.items.length > 0 && (
-                <div style={{ marginTop: '1rem' }}>
-                  <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Items ({order.items.length}):</p>
-                  {order.items.map((item, idx) => (
-                    <p key={idx} style={{ color: '#7f8c8d', fontSize: '0.95rem' }}>
-                      • Product #{item.product_id} - Qty: {item.quantity} @ ${item.price.toFixed(2)}
-                    </p>
-                  ))}
-                </div>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {orders.map(order => {
+          const { steps, activeStep } = getOrderSteps(order.status);
+          
+          return (
+            <Paper key={order.id} elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
+                <Box>
+                  <Typography variant="h5" fontWeight={700} gutterBottom>
+                    Order #{order.id}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Placed on {new Date(order.created_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </Typography>
+                </Box>
+                <Chip
+                  icon={getStatusIcon(order.status)}
+                  label={order.status.replace('_', ' ').toUpperCase()}
+                  color={getStatusColor(order.status)}
+                  size="medium"
+                  sx={{ fontWeight: 600, px: 1 }}
+                />
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="h4" fontWeight={700} color="primary.main">
+                    ${order.total_amount.toFixed(2)}
+                  </Typography>
+                </Grid>
+                {order.items && order.items.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                      Items ({order.items.length})
+                    </Typography>
+                    <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
+                      {order.items.map((item, idx) => (
+                        <Typography key={idx} variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                          • Product #{item.product_id} - Quantity: {item.quantity} @ ${item.price.toFixed(2)}
+                        </Typography>
+                      ))}
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+
+              {/* Order Timeline */}
+              {activeStep >= 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Stepper activeStep={activeStep} alternativeLabel>
+                    {steps.map((label) => (
+                      <Step key={label}>
+                        <StepLabel>{label}</StepLabel>
+                      </Step>
+                    ))}
+                  </Stepper>
+                </Box>
               )}
-            </div>
 
-            {/* Payment Section */}
-            {order.status === 'awaiting_payment' && (
-              <div style={{
-                marginTop: '1.5rem',
-                padding: '1rem',
-                backgroundColor: '#fff3cd',
-                borderRadius: '4px',
-                borderLeft: '4px solid #f39c12'
-              }}>
-                <p style={{ marginBottom: '1rem', fontWeight: '600', color: '#856404' }}>
-                  ⏳ Payment Required
-                </p>
-                <button
-                  onClick={() => handlePayment(order.id)}
-                  disabled={processingPayment === order.id}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#27ae60',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: processingPayment === order.id ? 'not-allowed' : 'pointer',
-                    fontWeight: '600',
-                    opacity: processingPayment === order.id ? 0.6 : 1
-                  }}
+              {/* Payment Section */}
+              {order.status === 'awaiting_payment' && (
+                <Alert
+                  severity="warning"
+                  icon={<Payment />}
+                  sx={{ mb: 2 }}
+                  action={
+                    <Button
+                      color="inherit"
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handlePayment(order.id)}
+                      disabled={processingPayment === order.id}
+                      startIcon={<Payment />}
+                      sx={{ fontWeight: 600 }}
+                    >
+                      {processingPayment === order.id ? 'Processing...' : 'Pay Now'}
+                    </Button>
+                  }
                 >
-                  {processingPayment === order.id ? 'Processing...' : '💳 Pay Now'}
-                </button>
-              </div>
-            )}
+                  <Typography fontWeight={600}>Payment Required</Typography>
+                  Complete payment to confirm your order
+                </Alert>
+              )}
 
-            {/* Order Actions - Users can only cancel */}
-            {getUserAllowedActions(order.status).length > 0 && (
-              <div style={{ marginTop: '1.5rem' }}>
-                <p style={{ fontWeight: '600', marginBottom: '0.75rem' }}>Actions:</p>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <button
+              {/* Order Actions */}
+              {getUserAllowedActions(order.status).length > 0 && (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    color="error"
                     onClick={() => handleStatusUpdate(order.id, 'cancelled')}
                     disabled={updatingOrderId === order.id}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#e74c3c',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: updatingOrderId === order.id ? 'not-allowed' : 'pointer',
-                      fontWeight: '500',
-                      opacity: updatingOrderId === order.id ? 0.6 : 1,
-                      fontSize: '0.9rem'
-                    }}
+                    startIcon={<Cancel />}
                   >
-                    {updatingOrderId === order.id ? 'Processing...' : '❌ Cancel Order'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Status Timeline */}
-            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #ecf0f1' }}>
-              <p style={{ fontWeight: '600', marginBottom: '0.75rem', fontSize: '0.9rem' }}>Timeline:</p>
-              <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>
-                <div>✓ Order Created</div>
-                <div style={{ marginLeft: '1rem' }}>
-                  {order.status !== 'awaiting_payment' ? '✓ Payment Confirmed' : '⏳ Awaiting Payment'}
-                </div>
-                {['confirmed', 'shipped', 'delivered'].includes(order.status) && (
-                  <div style={{ marginLeft: '1rem' }}>✓ Order Confirmed</div>
-                )}
-                {['shipped', 'delivered'].includes(order.status) && (
-                  <div style={{ marginLeft: '1rem' }}>✓ Shipped</div>
-                )}
-                {order.status === 'delivered' && (
-                  <div style={{ marginLeft: '1rem' }}>✓ Delivered</div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+                    {updatingOrderId === order.id ? 'Processing...' : 'Cancel Order'}
+                  </Button>
+                </Box>
+              )}
+            </Paper>
+          );
+        })}
+      </Box>
+    </Container>
   );
 }
 

@@ -1,5 +1,26 @@
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Typography,
+  Box,
+  Button,
+  Card,
+  CardMedia,
+  CardContent,
+  IconButton,
+  Divider,
+  Paper,
+  Grid,
+  TextField,
+} from '@mui/material';
+import {
+  Delete,
+  Add,
+  Remove,
+  ShoppingCartCheckout,
+  ShoppingBag,
+} from '@mui/icons-material';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { ordersAPI } from '../api/api';
@@ -11,7 +32,6 @@ function Cart() {
 
   const handleCheckout = async () => {
     if (!user) {
-      alert('Please login to checkout');
       navigate('/login');
       return;
     }
@@ -24,84 +44,153 @@ function Cart() {
 
     try {
       const response = await ordersAPI.create({ items });
-      alert('Order placed successfully!');
       clearCart();
       navigate('/orders');
     } catch (error) {
       console.error('Error creating order:', error);
-      alert('Failed to create order. Please try again.');
     }
   };
 
   if (cart.length === 0) {
     return (
-      <div className="container">
-        <div className="empty-state">
-          <h2>Your cart is empty</h2>
-          <p>Add some products to get started</p>
-          <button onClick={() => navigate('/')} className="btn btn-primary">
-            Browse Products
-          </button>
-        </div>
-      </div>
+      <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
+        <ShoppingBag sx={{ fontSize: 100, color: 'text.secondary', mb: 2 }} />
+        <Typography variant="h4" gutterBottom fontWeight={700}>
+          Your cart is empty
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+          Add some products to get started
+        </Typography>
+        <Button
+          variant="contained"
+          size="large"
+          onClick={() => navigate('/')}
+          startIcon={<ShoppingBag />}
+        >
+          Browse Products
+        </Button>
+      </Container>
     );
   }
 
   return (
-    <div className="container">
-      <div className="cart-container">
-        <h1>Shopping Cart</h1>
-        
-        <div className="cart-items">
-          {cart.map(item => (
-            <div key={item.id} className="cart-item">
-              <img
-                src={item.image_url}
-                alt={item.name}
-                className="cart-item-image"
-              />
-              <div className="cart-item-info">
-                <h3>{item.name}</h3>
-                <p>${item.price.toFixed(2)}</p>
-              </div>
-              <div className="quantity-selector">
-                <button onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
-                <input
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
-                  min="1"
-                />
-                <button onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
-              </div>
-              <p style={{ fontWeight: 'bold' }}>
-                ${(item.price * item.quantity).toFixed(2)}
-              </p>
-              <button
-                onClick={() => removeFromCart(item.id)}
-                className="btn btn-secondary"
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-        </div>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Typography variant="h3" component="h1" gutterBottom fontWeight={700}>
+        Shopping Cart
+      </Typography>
 
-        <div className="cart-summary">
-          <div className="cart-total">
-            <span>Total:</span>
-            <span>${getTotal().toFixed(2)}</span>
-          </div>
-          <button
-            onClick={handleCheckout}
-            className="btn btn-primary"
-            style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}
-          >
-            Proceed to Checkout
-          </button>
-        </div>
-      </div>
-    </div>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+          <Paper elevation={2} sx={{ p: 2, borderRadius: 2 }}>
+            {cart.map((item, index) => (
+              <Box key={item.id}>
+                <Card
+                  elevation={0}
+                  sx={{
+                    display: 'flex',
+                    mb: 2,
+                    p: 2,
+                    bgcolor: 'grey.50',
+                    borderRadius: 2,
+                  }}
+                >
+                  <CardMedia
+                    component="img"
+                    sx={{ width: 120, height: 120, borderRadius: 2, objectFit: 'cover' }}
+                    image={item.image_url}
+                    alt={item.name}
+                  />
+                  <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="h6" component="h3" fontWeight={600}>
+                        {item.name}
+                      </Typography>
+                      <IconButton
+                        color="error"
+                        onClick={() => removeFromCart(item.id)}
+                        size="small"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Box>
+                    
+                    <Typography variant="h6" color="success.main" fontWeight={700} sx={{ mb: 2 }}>
+                      ${item.price.toFixed(2)}
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                        >
+                          <Remove />
+                        </IconButton>
+                        <Typography sx={{ px: 2, fontWeight: 600, minWidth: 40, textAlign: 'center' }}>
+                          {item.quantity}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        >
+                          <Add />
+                        </IconButton>
+                      </Box>
+                      
+                      <Typography variant="h6" fontWeight={700}>
+                        ${(item.price * item.quantity).toFixed(2)}
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
+                {index < cart.length - 1 && <Divider sx={{ my: 1 }} />}
+              </Box>
+            ))}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'sticky', top: 80 }}>
+            <Typography variant="h5" gutterBottom fontWeight={700}>
+              Order Summary
+            </Typography>
+            <Divider sx={{ my: 2 }} />
+            
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body1">Items ({cart.length})</Typography>
+                <Typography variant="body1">${getTotal().toFixed(2)}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body1">Shipping</Typography>
+                <Typography variant="body1" color="success.main">FREE</Typography>
+              </Box>
+            </Box>
+            
+            <Divider sx={{ my: 2 }} />
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+              <Typography variant="h5" fontWeight={700}>Total</Typography>
+              <Typography variant="h5" fontWeight={700} color="primary.main">
+                ${getTotal().toFixed(2)}
+              </Typography>
+            </Box>
+            
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              onClick={handleCheckout}
+              startIcon={<ShoppingCartCheckout />}
+              sx={{ py: 1.5, fontSize: '1.1rem' }}
+            >
+              Proceed to Checkout
+            </Button>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Container>
   );
 }
 

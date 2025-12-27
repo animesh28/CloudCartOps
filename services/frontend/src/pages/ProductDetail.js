@@ -1,5 +1,25 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  Button,
+  Box,
+  IconButton,
+  Chip,
+  CircularProgress,
+  Breadcrumbs,
+  Link,
+} from '@mui/material';
+import {
+  ArrowBack,
+  Add,
+  Remove,
+  ShoppingCart,
+  Home as HomeIcon,
+} from '@mui/icons-material';
 import { productsAPI } from '../api/api';
 import { CartContext } from '../context/CartContext';
 
@@ -29,66 +49,147 @@ function ProductDetail() {
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
-    alert('Added to cart!');
     navigate('/cart');
   };
 
   if (loading) {
-    return <div className="loading">Loading product...</div>;
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '60vh',
+        }}
+      >
+        <CircularProgress size={60} />
+      </Box>
+    );
   }
 
   if (!product) {
-    return <div className="empty-state"><h2>Product not found</h2></div>;
+    return (
+      <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
+        <Typography variant="h4" gutterBottom>
+          Product not found
+        </Typography>
+        <Button variant="contained" onClick={() => navigate('/')} sx={{ mt: 2 }}>
+          Back to Products
+        </Button>
+      </Container>
+    );
   }
 
   return (
-    <div className="container">
-      <button onClick={() => navigate('/')} className="btn btn-secondary" style={{ marginBottom: '1rem' }}>
-        ← Back to Products
-      </button>
-      
-      <div className="product-detail">
-        <div className="product-detail-content">
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="product-detail-image"
-          />
-          <div className="product-detail-info">
-            <h1>{product.name}</h1>
-            <p className="product-price">${product.price.toFixed(2)}</p>
-            <p className={`product-stock ${product.stock < 10 ? 'low' : ''}`}>
-              {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
-            </p>
-            <p style={{ margin: '1rem 0', color: '#7f8c8d' }}>{product.description}</p>
-            <p style={{ marginBottom: '1rem' }}>
-              <strong>Category:</strong> {product.category}
-            </p>
-            
-            <div className="quantity-selector">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
-              <input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                min="1"
-                max={product.stock}
-              />
-              <button onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}>+</button>
-            </div>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Breadcrumbs sx={{ mb: 3 }}>
+        <Link
+          component="button"
+          variant="body1"
+          onClick={() => navigate('/')}
+          sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+        >
+          <HomeIcon sx={{ mr: 0.5 }} fontSize="small" />
+          Products
+        </Link>
+        <Typography color="text.primary">{product.name}</Typography>
+      </Breadcrumbs>
 
-            <button
-              className="btn btn-primary"
+      <Button
+        startIcon={<ArrowBack />}
+        onClick={() => navigate('/')}
+        sx={{ mb: 3 }}
+      >
+        Back to Products
+      </Button>
+
+      <Paper elevation={2} sx={{ p: 4, borderRadius: 3 }}>
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={6}>
+            <Box
+              component="img"
+              src={product.image_url}
+              alt={product.name}
+              sx={{
+                width: '100%',
+                height: 'auto',
+                maxHeight: 500,
+                objectFit: 'cover',
+                borderRadius: 2,
+                bgcolor: 'grey.100',
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="h3" component="h1" gutterBottom fontWeight={700}>
+              {product.name}
+            </Typography>
+
+            <Typography variant="h4" color="success.main" fontWeight={700} gutterBottom>
+              ${product.price.toFixed(2)}
+            </Typography>
+
+            <Box sx={{ mb: 3 }}>
+              <Chip
+                label={product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                color={product.stock === 0 ? 'error' : product.stock < 10 ? 'warning' : 'success'}
+                size="medium"
+                sx={{ fontWeight: 600 }}
+              />
+            </Box>
+
+            <Typography variant="body1" color="text.secondary" paragraph sx={{ mb: 3 }}>
+              {product.description}
+            </Typography>
+
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                Category
+              </Typography>
+              <Chip label={product.category} color="primary" variant="outlined" />
+            </Box>
+
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                Quantity
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', border: 2, borderColor: 'divider', borderRadius: 1 }}>
+                  <IconButton
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                  >
+                    <Remove />
+                  </IconButton>
+                  <Typography sx={{ px: 3, fontWeight: 600, fontSize: '1.2rem', minWidth: 60, textAlign: 'center' }}>
+                    {quantity}
+                  </Typography>
+                  <IconButton
+                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                    disabled={quantity >= product.stock}
+                  >
+                    <Add />
+                  </IconButton>
+                </Box>
+              </Box>
+            </Box>
+
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
               onClick={handleAddToCart}
               disabled={product.stock === 0}
-              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}
+              startIcon={<ShoppingCart />}
+              sx={{ py: 2, fontSize: '1.1rem', fontWeight: 600 }}
             >
-              Add to Cart
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+              {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
+    </Container>
   );
 }
 

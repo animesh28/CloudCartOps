@@ -51,16 +51,16 @@ CREATE TABLE IF NOT EXISTS order_items (
 -- Insert Sample Data
 -- Sample Products
 INSERT INTO products (name, description, price, stock, category, image_url) VALUES
-    ('Laptop Pro 15', 'High-performance laptop for professionals', 1299.99, 50, 'Electronics', 'https://via.placeholder.com/300'),
-    ('Wireless Mouse', 'Ergonomic wireless mouse', 29.99, 200, 'Accessories', 'https://via.placeholder.com/300'),
-    ('USB-C Hub', '7-in-1 USB-C hub with HDMI and ethernet', 49.99, 150, 'Accessories', 'https://via.placeholder.com/300'),
-    ('Mechanical Keyboard', 'RGB mechanical gaming keyboard', 89.99, 75, 'Accessories', 'https://via.placeholder.com/300'),
-    ('Monitor 27"', '4K UHD 27-inch monitor', 399.99, 30, 'Electronics', 'https://via.placeholder.com/300'),
-    ('Webcam HD', '1080p HD webcam with microphone', 69.99, 100, 'Electronics', 'https://via.placeholder.com/300'),
-    ('Desk Lamp', 'LED desk lamp with adjustable brightness', 34.99, 120, 'Office', 'https://via.placeholder.com/300'),
-    ('Notebook Set', 'Set of 3 premium notebooks', 19.99, 300, 'Office', 'https://via.placeholder.com/300'),
-    ('Backpack', 'Laptop backpack with USB charging port', 59.99, 80, 'Accessories', 'https://via.placeholder.com/300'),
-    ('Phone Stand', 'Adjustable phone and tablet stand', 14.99, 250, 'Accessories', 'https://via.placeholder.com/300')
+    ('Laptop Pro 15', 'High-performance laptop for professionals', 1299.99, 50, 'Electronics', 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop'),
+    ('Wireless Mouse', 'Ergonomic wireless mouse', 29.99, 200, 'Accessories', 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400&h=300&fit=crop'),
+    ('USB-C Hub', '7-in-1 USB-C hub with HDMI and ethernet', 49.99, 150, 'Accessories', 'https://images.unsplash.com/photo-1625948515291-69613efd103f?w=400&h=300&fit=crop'),
+    ('Mechanical Keyboard', 'RGB mechanical gaming keyboard', 89.99, 75, 'Accessories', 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400&h=300&fit=crop'),
+    ('Monitor 27"', '4K UHD 27-inch monitor', 399.99, 30, 'Electronics', 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=400&h=300&fit=crop'),
+    ('Webcam HD', '1080p HD webcam with microphone', 69.99, 100, 'Electronics', 'https://images.unsplash.com/photo-1589792923962-537704632910?w=400&h=300&fit=crop'),
+    ('Desk Lamp', 'LED desk lamp with adjustable brightness', 34.99, 120, 'Office', 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=400&h=300&fit=crop'),
+    ('Notebook Set', 'Set of 3 premium notebooks', 19.99, 300, 'Office', 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=400&h=300&fit=crop'),
+    ('Backpack', 'Laptop backpack with USB charging port', 59.99, 80, 'Accessories', 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=300&fit=crop'),
+    ('Phone Stand', 'Adjustable phone and tablet stand', 14.99, 250, 'Accessories', 'https://images.unsplash.com/photo-1574484284002-952d92456975?w=400&h=300&fit=crop')
 ON CONFLICT DO NOTHING;
 
 -- Create indexes for better performance
