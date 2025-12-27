@@ -134,6 +134,7 @@ function AdminDashboard() {
 function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [userDetails, setUserDetails] = useState({});
 
   React.useEffect(() => {
     fetchAllOrders();
@@ -149,6 +150,25 @@ function AdminOrders() {
       if (response.ok) {
         const data = await response.json();
         setOrders(data || []);
+
+        // Fetch user details (username, email) for each unique user_id
+        const ids = Array.from(new Set((data || []).map(o => o.user_id)));
+        const details = {};
+        await Promise.all(ids.map(async (id) => {
+          try {
+            const userRes = await fetch(`${API_URL}/api/users/${id}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (userRes.ok) {
+              const user = await userRes.json();
+              details[id] = { username: user.username, email: user.email };
+            }
+          } catch (e) {
+            // ignore per-user failures
+          }
+        }));
+        setUserDetails(details);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -249,7 +269,11 @@ function AdminOrders() {
                         Order #{order.id}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        User ID: {order.user_id} | Total: ${order.total_amount.toFixed(2)}
+                        User ID: {order.user_id}
+                        {userDetails[order.user_id] && (
+                          <> | {userDetails[order.user_id].username} ({userDetails[order.user_id].email})</>
+                        )}
+                        {` | Total: $${order.total_amount.toFixed(2)}`}
                       </Typography>
                       {order.items && order.items.length > 0 && (
                         <Box sx={{ mt: 1 }}>

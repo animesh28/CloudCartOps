@@ -67,21 +67,6 @@ function Home() {
     addToCart(product, 1);
   };
 
-  if (loading && products.length === 0) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '60vh',
-        }}
-      >
-        <CircularProgress size={60} />
-      </Box>
-    );
-  }
-
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Box sx={{ mb: 4 }}>
@@ -123,7 +108,18 @@ function Home() {
         </Paper>
       </Box>
 
-      {products.length === 0 ? (
+      {loading && products.length === 0 ? (
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            py: 8,
+          }}
+        >
+          <CircularProgress size={60} />
+        </Box>
+      ) : products.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Inventory2 sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h5" gutterBottom color="text.secondary">
