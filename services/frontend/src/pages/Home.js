@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -30,14 +30,23 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const { addToCart } = useContext(CartContext);
   const navigate = useNavigate();
+
+  // Debounce search input to avoid excessive API calls
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearch(searchInput);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
 
   useEffect(() => {
     fetchProducts();
   }, [category, search]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const params = {};
@@ -51,14 +60,14 @@ function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [category, search]);
 
   const handleAddToCart = (product, e) => {
     e.stopPropagation();
     addToCart(product, 1);
   };
 
-  if (loading) {
+  if (loading && products.length === 0) {
     return (
       <Box
         sx={{
@@ -102,8 +111,8 @@ function Home() {
                 fullWidth
                 label="Search products"
                 placeholder="Search by name or description..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 variant="outlined"
                 InputProps={{
                   startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />,

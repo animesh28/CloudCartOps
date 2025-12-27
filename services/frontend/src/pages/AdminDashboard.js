@@ -42,7 +42,7 @@ function TabPanel({ children, value, index, ...other }) {
       aria-labelledby={`admin-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ py: 3, px: 3 }}>{children}</Box>}
     </div>
   );
 }
@@ -231,7 +231,17 @@ function AdminOrders() {
         <Grid container spacing={2}>
           {orders.map((order) => (
             <Grid item xs={12} key={order.id}>
-              <Card elevation={1}>
+              <Card
+                elevation={0}
+                sx={{
+                  border: 1,
+                  borderColor: 'divider',
+                  borderLeft: 4,
+                  borderLeftColor: getStatusColor(order.status) === 'success' ? '#4caf50' : getStatusColor(order.status) === 'error' ? '#f44336' : '#ff9800',
+                  bgcolor: 'action.hover',
+                  transition: 'bgcolor 0.2s',
+                }}
+              >
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Box>
@@ -241,9 +251,15 @@ function AdminOrders() {
                       <Typography variant="body2" color="text.secondary">
                         User ID: {order.user_id} | Total: ${order.total_amount.toFixed(2)}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Items: {order.items?.length || 0}
-                      </Typography>
+                      {order.items && order.items.length > 0 && (
+                        <Box sx={{ mt: 1 }}>
+                          {order.items.map((item, idx) => (
+                            <Typography key={idx} variant="caption" color="text.secondary" display="block">
+                              {item.product_name || `Product #${item.product_id}`} × {item.quantity} @ ${item.price.toFixed(2)}
+                            </Typography>
+                          ))}
+                        </Box>
+                      )}
                     </Box>
                     <Chip
                       label={order.status.replace('_', ' ').toUpperCase()}

@@ -119,25 +119,18 @@ function Cart() {
                     </Typography>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
-                        >
-                          <Remove />
-                        </IconButton>
-                        <Typography sx={{ px: 2, fontWeight: 600, minWidth: 40, textAlign: 'center' }}>
-                          {item.quantity}
-                        </Typography>
-                        <IconButton
-                          size="small"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        >
-                          <Add />
-                        </IconButton>
-                      </Box>
-                      
+                      <TextField
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 1;
+                          updateQuantity(item.id, Math.max(1, val));
+                        }}
+                        inputProps={{ min: 1 }}
+                        size="small"
+                        sx={{ width: 120 }}
+                        label="Qty"
+                      />
                       <Typography variant="h6" fontWeight={700}>
                         ${(item.price * item.quantity).toFixed(2)}
                       </Typography>

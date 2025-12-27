@@ -12,6 +12,7 @@ import {
   CircularProgress,
   Breadcrumbs,
   Link,
+  TextField
 } from '@mui/material';
 import {
   ArrowBack,
@@ -154,25 +155,18 @@ function ProductDetail() {
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                 Quantity
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', border: 2, borderColor: 'divider', borderRadius: 1 }}>
-                  <IconButton
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    disabled={quantity <= 1}
-                  >
-                    <Remove />
-                  </IconButton>
-                  <Typography sx={{ px: 3, fontWeight: 600, fontSize: '1.2rem', minWidth: 60, textAlign: 'center' }}>
-                    {quantity}
-                  </Typography>
-                  <IconButton
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                    disabled={quantity >= product.stock}
-                  >
-                    <Add />
-                  </IconButton>
-                </Box>
-              </Box>
+              <TextField
+                type="number"
+                value={quantity}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 1;
+                  setQuantity(Math.max(1, Math.min(product.stock, val)));
+                }}
+                inputProps={{ min: 1, max: product.stock }}
+                size="medium"
+                sx={{ width: 150 }}
+                label="Enter quantity"
+              />
             </Box>
 
             <Button

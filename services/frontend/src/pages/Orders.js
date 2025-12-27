@@ -216,7 +216,7 @@ function Orders() {
                     <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
                       {order.items.map((item, idx) => (
                         <Typography key={idx} variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                          • Product #{item.product_id} - Quantity: {item.quantity} @ ${item.price.toFixed(2)}
+                          • {item.product_name || `Product #${item.product_id}`} × {item.quantity} @ ${item.price.toFixed(2)}
                         </Typography>
                       ))}
                     </Box>

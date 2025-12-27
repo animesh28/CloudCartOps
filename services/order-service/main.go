@@ -130,12 +130,13 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ID        int       `json:"id"`
-	OrderID   int       `json:"order_id"`
-	ProductID int       `json:"product_id"`
-	Quantity  int       `json:"quantity"`
-	Price     float64   `json:"price"`
-	CreatedAt time.Time `json:"created_at"`
+	ID          int       `json:"id"`
+	OrderID     int       `json:"order_id"`
+	ProductID   int       `json:"product_id"`
+	ProductName string    `json:"product_name"`
+	Quantity    int       `json:"quantity"`
+	Price       float64   `json:"price"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type CreateOrderRequest struct {
@@ -250,9 +251,26 @@ func createOrder(w http.ResponseWriter, r *http.Request) {
 
 	// Insert order items
 	for _, item := range req.Items {
+		// Fetch product name from product-service
+		productName := ""
+		productServiceURL := os.Getenv("PRODUCT_SERVICE_URL")
+		if productServiceURL == "" {
+			productServiceURL = "http://product-service:8002"
+		}
+
+		resp, err := http.Get(fmt.Sprintf("%s/products/%d", productServiceURL, item.ProductID))
+		if err == nil && resp.StatusCode == http.StatusOK {
+			var product map[string]interface{}
+			json.NewDecoder(resp.Body).Decode(&product)
+			if name, ok := product["name"]; ok {
+				productName = name.(string)
+			}
+			resp.Body.Close()
+		}
+
 		_, err = tx.Exec(
-			"INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)",
-			orderID, item.ProductID, item.Quantity, item.Price,
+			"INSERT INTO order_items (order_id, product_id, product_name, quantity, price) VALUES ($1, $2, $3, $4, $5)",
+			orderID, item.ProductID, productName, item.Quantity, item.Price,
 		)
 		if err != nil {
 			log.Println("Failed to create order item:", err)
@@ -337,13 +355,22 @@ func getAllOrders(w http.ResponseWriter, r *http.Request) {
 
 	var orders []Order
 	for rows.Next() {
-		var order Order
-		err := rows.Scan(&order.ID, &order.UserID, &order.TotalAmount, &order.Status, &order.CreatedAt, &order.UpdatedAt)
+		var id int
+		var userID int
+		var totalAmount float64
+		var status string
+		var createdAt, updatedAt time.Time
+		if err := rows.Scan(&id, &userID, &totalAmount, &status, &createdAt, &updatedAt); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		order, err := getOrderByID(id)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		orders = append(orders, order)
+		orders = append(orders, *order)
 	}
 
 	if orders == nil {
@@ -377,13 +404,22 @@ func getUserOrders(w http.ResponseWriter, r *http.Request) {
 
 	var orders []Order
 	for rows.Next() {
-		var order Order
-		err := rows.Scan(&order.ID, &order.UserID, &order.TotalAmount, &order.Status, &order.CreatedAt, &order.UpdatedAt)
+		var id int
+		var userID int
+		var totalAmount float64
+		var status string
+		var createdAt, updatedAt time.Time
+		if err := rows.Scan(&id, &userID, &totalAmount, &status, &createdAt, &updatedAt); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		order, err := getOrderByID(id)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		orders = append(orders, order)
+		orders = append(orders, *order)
 	}
 
 	if orders == nil {
@@ -713,7 +749,7 @@ func getOrderByID(orderID int) (*Order, error) {
 
 	// Get order items
 	rows, err := db.Query(`
-		SELECT id, order_id, product_id, quantity, price, created_at 
+		SELECT id, order_id, product_id, product_name, quantity, price, created_at 
 		FROM order_items 
 		WHERE order_id = $1
 	`, orderID)
@@ -725,7 +761,7 @@ func getOrderByID(orderID int) (*Order, error) {
 
 	for rows.Next() {
 		var item OrderItem
-		err := rows.Scan(&item.ID, &item.OrderID, &item.ProductID, &item.Quantity, &item.Price, &item.CreatedAt)
+		err := rows.Scan(&item.ID, &item.OrderID, &item.ProductID, &item.ProductName, &item.Quantity, &item.Price, &item.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
