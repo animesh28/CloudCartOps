@@ -211,5 +211,26 @@ services:
       - api-gateway
     restart: unless-stopped
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cloudcart-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    depends_on:
+      - api-gateway
+      - user-service
+      - product-service
+      - order-service
+      - notification-worker
+      - chaos-service
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  prometheus_data:
