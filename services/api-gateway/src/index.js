@@ -13,6 +13,7 @@ const rateLimiter = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
 const metricsMiddleware = require('./middleware/metrics');
 const { chaosMiddleware } = require('./middleware/chaos');
+const gatewayMetrics = require('./utils/gatewayMetrics');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,6 +35,12 @@ app.get('/health', (req, res) => {
     service: 'api-gateway',
     timestamp: new Date().toISOString()
   });
+});
+
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', gatewayMetrics.register.contentType);
+  res.end(await gatewayMetrics.register.metrics());
 });
 
 // Rate limiting

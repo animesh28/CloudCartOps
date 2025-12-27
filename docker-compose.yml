@@ -156,10 +156,13 @@ services:
       context: ./services/notification-worker
       dockerfile: Dockerfile
     container_name: cloudcart-notification-worker
+    ports:
+      - "8005:8005"
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_GROUP_ID: notification-worker-group
       SERVICE_NAME: notification-worker
+      METRICS_PORT: 8005
     depends_on:
       kafka:
         condition: service_healthy

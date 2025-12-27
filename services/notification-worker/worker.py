@@ -3,6 +3,9 @@ import json
 import os
 import logging
 from datetime import datetime
+from prometheus_client import start_http_server
+import prometheus_metrics
+import threading
 
 logging.basicConfig(
     level=logging.INFO,
@@ -141,6 +144,15 @@ def main():
     logger.info(f"Kafka Brokers: {KAFKA_BOOTSTRAP_SERVERS}")
     logger.info(f"Subscribed Topics: {TOPICS}")
 
+    # Start Prometheus metrics HTTP server on port 8005
+    metrics_port = int(os.getenv('METRICS_PORT', 8005))
+    start_http_server(metrics_port, registry=prometheus_metrics.registry)
+    logger.info(f"✅ Prometheus metrics server started on port {metrics_port}")
+    
+    # Set worker as running
+    prometheus_metrics.worker_running.set(1)
+    start_time = datetime.now()
+
     try:
         consumer = KafkaConsumer(
             *TOPICS,
@@ -159,29 +171,54 @@ def main():
                 topic = message.topic
                 event_data = message.value
 
+                # Update uptime
+                uptime = (datetime.now() - start_time).total_seconds()
+                prometheus_metrics.worker_uptime_seconds.set(uptime)
+
+                # Record message consumed
+                prometheus_metrics.messages_consumed_total.labels(topic=topic).inc()
+
                 logger.info(f"\n{'='*60}")
                 logger.info(f"Received event from topic: {topic}")
                 logger.info(f"Event data: {json.dumps(event_data, indent=2)}")
                 logger.info(f"{'='*60}")
 
                 # Process event with appropriate handler
+                process_start = datetime.now()
                 handler = EVENT_HANDLERS.get(topic)
                 if handler:
                     handler(event_data)
+                    # Record successful processing
+                    process_duration = (datetime.now() - process_start).total_seconds()
+                    prometheus_metrics.message_processing_duration_seconds.labels(
+                        topic=topic
+                    ).observe(process_duration)
+                    prometheus_metrics.messages_processed_total.labels(
+                        topic=topic, event_type=topic
+                    ).inc()
                 else:
                     logger.warning(f"No handler found for topic: {topic}")
+                    prometheus_metrics.messages_failed_total.labels(
+                        topic=topic, error_type='no_handler'
+                    ).inc()
 
                 # Simulate notification sent
                 logger.info(f"✉️  Notification processed successfully for {topic}\n")
 
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
+                prometheus_metrics.messages_failed_total.labels(
+                    topic=topic, error_type=type(e).__name__
+                ).inc()
                 continue
 
     except KeyboardInterrupt:
         logger.info("Shutting down Notification Worker...")
+        prometheus_metrics.worker_running.set(0)
     except Exception as e:
         logger.error(f"Fatal error: {e}")
+        prometheus_metrics.worker_running.set(0)
+        prometheus_metrics.worker_restarts_total.inc()
         raise
 
 if __name__ == "__main__":

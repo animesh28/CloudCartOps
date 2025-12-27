@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
@@ -6,7 +6,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
 from datetime import datetime
 from kafka_producer import publish_event
+import prometheus_metrics
 import os
+import time
 
 app = Flask(__name__)
 CORS(app)
@@ -42,6 +44,13 @@ def health_check():
         "timestamp": datetime.utcnow().isoformat()
     })
 
+@app.route('/metrics', methods=['GET'])
+def metrics():
+    start_time = time.time()
+    """Prometheus metrics endpoint"""
+    return Response(prometheus_metrics.get_metrics(), 
+                   mimetype=prometheus_metrics.get_content_type())
+
 @app.route('/products', methods=['GET'])
 def get_products():
     db = SessionLocal()
@@ -52,17 +61,29 @@ def get_products():
         query = db.query(Product)
         
         if category:
-            query = query.filter(Product.category == category)
-        
-        if search:
-            query = query.filter(Product.name.ilike(f'%{search}%'))
-        
-        products = query.all()
-        
-        return jsonify([{
+          sponse = jsonify([{
             'id': p.id,
             'name': p.name,
             'description': p.description,
+            'price': float(p.price),
+            'stock': p.stock,
+            'category': p.category,
+            'image_url': p.image_url,
+            'created_at': p.created_at.isoformat(),
+            'updated_at': p.updated_at.isoformat()
+        } for p in products])
+        
+        # Record metrics
+        duration = time.time() - start_time
+        prometheus_metrics.product_list_time.labels(category=category or 'all').observe(duration)
+        prometheus_metrics.http_requests_total.labels(method='GET', endpoint='/products', status='200').inc()
+        prometheus_metrics.request_duration_seconds.labels(method='GET', endpoint='/products').observe(duration)
+        
+        return response
+    except Exception as e:
+        prometheus_metrics.errors_total.labels(error_type=type(e).__name__, endpoint='/products').inc()
+        prometheus_metrics.http_requests_total.labels(method='GET', endpoint='/products', status='500').inc()
+        raisedescription,
             'price': float(p.price),
             'stock': p.stock,
             'category': p.category,
@@ -75,14 +96,21 @@ def get_products():
 
 @app.route('/products/<int:product_id>', methods=['GET'])
 def get_product(product_id):
+    start_time = time.time()
     db = SessionLocal()
     try:
         product = db.query(Product).filter(Product.id == product_id).first()
         
         if not product:
+            prometheus_metrics.http_requests_total.labels(method='GET', endpoint='/products/<id>', status='404').inc()
             return jsonify({'error': 'Product not found'}), 404
         
-        return jsonify({
+        prometheus_metrics.product_views_total.labels(
+            product_id=str(product_id), 
+            category=product.category or 'unknown'
+        ).inc()
+        
+        response = jsonify({
             'id': product.id,
             'name': product.name,
             'description': product.description,
@@ -93,6 +121,17 @@ def get_product(product_id):
             'created_at': product.created_at.isoformat(),
             'updated_at': product.updated_at.isoformat()
         })
+        
+        # Record metrics
+        duration = time.time() - start_time
+        prometheus_metrics.http_requests_total.labels(method='GET', endpoint='/products/<id>', status='200').inc()
+        prometheus_metrics.request_duration_seconds.labels(method='GET', endpoint='/products/<id>').observe(duration)
+        
+        return response
+    except Exception as e:
+        prometheus_metrics.errors_total.labels(error_type=type(e).__name__, endpoint='/products/<id>').inc()
+        prometheus_metrics.http_requests_total.labels(method='GET', endpoint='/products/<id>', status='500').inc()
+        raise
     finally:
         db.close()
 
@@ -151,12 +190,14 @@ def create_product():
 
 @app.route('/products/<int:product_id>/stock', methods=['PATCH'])
 def update_stock(product_id):
+    start_time = time.time()
     db = SessionLocal()
     try:
         data = request.json
         product = db.query(Product).filter(Product.id == product_id).first()
         
         if not product:
+            prometheus_metrics.http_requests_total.labels(method='PATCH', endpoint='/products/<id>/stock', status='404').inc()
             return jsonify({'error': 'Product not found'}), 404
         
         old_stock = product.stock
@@ -166,8 +207,18 @@ def update_stock(product_id):
         db.commit()
         db.refresh(product)
         
+        # Record stock update metric
+        prometheus_metrics.product_stock_updates.labels(
+            product_id=str(product_id),
+            reason='manual_update'
+        ).inc()
+        
         # Check for low stock
         if product.stock < 10 and old_stock >= 10:
+            prometheus_metrics.inventory_alerts_total.labels(
+                product_id=str(product_id),
+                severity='warning'
+            ).inc()
             publish_event('stock.low', {
                 'product_id': product.id,
                 'product_name': product.name,
@@ -175,12 +226,23 @@ def update_stock(product_id):
                 'timestamp': datetime.utcnow().isoformat()
             })
         
-        return jsonify({
+        response = jsonify({
             'id': product.id,
             'name': product.name,
             'stock': product.stock,
             'message': 'Stock updated successfully'
         })
+        
+        # Record metrics
+        duration = time.time() - start_time
+        prometheus_metrics.http_requests_total.labels(method='PATCH', endpoint='/products/<id>/stock', status='200').inc()
+        prometheus_metrics.request_duration_seconds.labels(method='PATCH', endpoint='/products/<id>/stock').observe(duration)
+        
+        return response
+    except Exception as e:
+        prometheus_metrics.errors_total.labels(error_type=type(e).__name__, endpoint='/products/<id>/stock').inc()
+        prometheus_metrics.http_requests_total.labels(method='PATCH', endpoint='/products/<id>/stock', status='500').inc()
+        raise
     finally:
         db.close()
 

@@ -15,27 +15,126 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/cors"
 )
 
 var db *sql.DB
 
+// Prometheus metrics
+var (
+	httpRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "order_http_requests_total",
+			Help: "Total HTTP requests to order service",
+		},
+		[]string{"method", "endpoint", "status"},
+	)
+
+	httpRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "order_http_request_duration_seconds",
+			Help:    "HTTP request duration in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "endpoint"},
+	)
+
+	ordersCreatedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "orders_created_total",
+			Help: "Total number of orders created",
+		},
+	)
+
+	ordersCancelledTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "orders_cancelled_total",
+			Help: "Total number of orders cancelled",
+		},
+	)
+
+	ordersCompletedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "orders_completed_total",
+			Help: "Total number of orders completed",
+		},
+	)
+
+	paymentsProcessedTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "order_payments_processed_total",
+			Help: "Total payments processed",
+		},
+		[]string{"status"},
+	)
+
+	orderProcessingDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "order_processing_duration_seconds",
+			Help:    "Time to process order creation",
+			Buckets: []float64{0.1, 0.5, 1, 2, 5, 10},
+		},
+	)
+
+	dbQueryDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "order_db_query_duration_seconds",
+			Help:    "Database query duration",
+			Buckets: []float64{0.01, 0.05, 0.1, 0.5, 1, 2},
+		},
+		[]string{"query_type"},
+	)
+
+	kafkaPublishDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "order_kafka_publish_duration_seconds",
+			Help:    "Time to publish Kafka events",
+			Buckets: []float64{0.01, 0.05, 0.1, 0.5, 1},
+		},
+		[]string{"event_type"},
+	)
+
+	errorsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "order_errors_total",
+			Help: "Total errors by type",
+		},
+		[]string{"error_type", "endpoint"},
+	)
+)
+
+func init() {
+	// Register metrics
+	prometheus.MustRegister(httpRequestsTotal)
+	prometheus.MustRegister(httpRequestDuration)
+	prometheus.MustRegister(ordersCreatedTotal)
+	prometheus.MustRegister(ordersCancelledTotal)
+	prometheus.MustRegister(ordersCompletedTotal)
+	prometheus.MustRegister(paymentsProcessedTotal)
+	prometheus.MustRegister(orderProcessingDuration)
+	prometheus.MustRegister(dbQueryDuration)
+	prometheus.MustRegister(kafkaPublishDuration)
+	prometheus.MustRegister(errorsTotal)
+}
+
 type Order struct {
-	ID          int       `json:"id"`
-	UserID      int       `json:"user_id"`
-	TotalAmount float64   `json:"total_amount"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          int         `json:"id"`
+	UserID      int         `json:"user_id"`
+	TotalAmount float64     `json:"total_amount"`
+	Status      string      `json:"status"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
 	Items       []OrderItem `json:"items,omitempty"`
 }
 
 type OrderItem struct {
-	ID        int     `json:"id"`
-	OrderID   int     `json:"order_id"`
-	ProductID int     `json:"product_id"`
-	Quantity  int     `json:"quantity"`
-	Price     float64 `json:"price"`
+	ID        int       `json:"id"`
+	OrderID   int       `json:"order_id"`
+	ProductID int       `json:"product_id"`
+	Quantity  int       `json:"quantity"`
+	Price     float64   `json:"price"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -73,6 +172,7 @@ func main() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/health", healthCheck).Methods("GET")
+	r.Handle("/metrics", promhttp.Handler()).Methods("GET")
 	r.HandleFunc("/orders", getAllOrders).Methods("GET")
 	r.HandleFunc("/orders", createOrder).Methods("POST")
 	r.HandleFunc("/orders/{id}", getOrder).Methods("GET")
@@ -107,8 +207,11 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func createOrder(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req CreateOrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpRequestsTotal.WithLabelValues("POST", "/orders", "400").Inc()
+		errorsTotal.WithLabelValues("decode_error", "/orders").Inc()
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -160,11 +263,14 @@ func createOrder(w http.ResponseWriter, r *http.Request) {
 
 	// Commit transaction
 	if err = tx.Commit(); err != nil {
+		httpRequestsTotal.WithLabelValues("POST", "/orders", "500").Inc()
+		errorsTotal.WithLabelValues("commit_error", "/orders").Inc()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Publish event to Kafka
+	kafkaStart := time.Now()
 	publishOrderEvent("order.created", map[string]interface{}{
 		"order_id":     orderID,
 		"user_id":      req.UserID,
@@ -173,13 +279,21 @@ func createOrder(w http.ResponseWriter, r *http.Request) {
 		"items":        len(req.Items),
 		"timestamp":    time.Now().Format(time.RFC3339),
 	})
+	kafkaPublishDuration.WithLabelValues("order.created").Observe(time.Since(kafkaStart).Seconds())
 
 	// Get created order
 	order, err := getOrderByID(orderID)
 	if err != nil {
+		httpRequestsTotal.WithLabelValues("POST", "/orders", "500").Inc()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Record metrics
+	ordersCreatedTotal.Inc()
+	orderProcessingDuration.Observe(time.Since(start).Seconds())
+	httpRequestsTotal.WithLabelValues("POST", "/orders", "201").Inc()
+	httpRequestDuration.WithLabelValues("POST", "/orders").Observe(time.Since(start).Seconds())
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -347,15 +461,15 @@ func updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 
 	// Publish event for status change with detailed information
 	eventMessage := map[string]interface{}{
-		"order_id":        orderID,
-		"user_id":         order.UserID,
-		"old_status":      order.Status,
-		"new_status":      req.Status,
-		"total_amount":    order.TotalAmount,
-		"item_count":      len(order.Items),
-		"timestamp":       time.Now().Format(time.RFC3339),
+		"order_id":     orderID,
+		"user_id":      order.UserID,
+		"old_status":   order.Status,
+		"new_status":   req.Status,
+		"total_amount": order.TotalAmount,
+		"item_count":   len(order.Items),
+		"timestamp":    time.Now().Format(time.RFC3339),
 	}
-	
+
 	// Include status-specific details
 	switch req.Status {
 	case "shipped":
@@ -379,6 +493,13 @@ func updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	publishOrderEvent("order.status_changed", eventMessage)
+
+	// Record metrics for cancelled/completed orders
+	if req.Status == "cancelled" {
+		ordersCancelledTotal.Inc()
+	} else if req.Status == "delivered" {
+		ordersCompletedTotal.Inc()
+	}
 
 	// Get updated order
 	updatedOrder, err := getOrderByID(orderID)
@@ -454,25 +575,25 @@ func processPayment(w http.ResponseWriter, r *http.Request) {
 
 	// Publish payment success event
 	publishOrderEvent("order.payment_confirmed", map[string]interface{}{
-		"order_id":        orderID,
-		"user_id":         order.UserID,
-		"total_amount":    order.TotalAmount,
-		"payment_method":  req.PaymentMethod,
-		"item_count":      len(order.Items),
-		"timestamp":       time.Now().Format(time.RFC3339),
-		"message":         "Payment successful - Order confirmed and ready for shipment",
+		"order_id":       orderID,
+		"user_id":        order.UserID,
+		"total_amount":   order.TotalAmount,
+		"payment_method": req.PaymentMethod,
+		"item_count":     len(order.Items),
+		"timestamp":      time.Now().Format(time.RFC3339),
+		"message":        "Payment successful - Order confirmed and ready for shipment",
 	})
 
 	// Also publish status change event (awaiting_payment -> confirmed)
 	publishOrderEvent("order.status_changed", map[string]interface{}{
-		"order_id":        orderID,
-		"user_id":         order.UserID,
-		"old_status":      "awaiting_payment",
-		"new_status":      "confirmed",
-		"total_amount":    order.TotalAmount,
-		"item_count":      len(order.Items),
-		"timestamp":       time.Now().Format(time.RFC3339),
-		"message":         "Order confirmed - Payment received, stock reduced",
+		"order_id":     orderID,
+		"user_id":      order.UserID,
+		"old_status":   "awaiting_payment",
+		"new_status":   "confirmed",
+		"total_amount": order.TotalAmount,
+		"item_count":   len(order.Items),
+		"timestamp":    time.Now().Format(time.RFC3339),
+		"message":      "Order confirmed - Payment received, stock reduced",
 	})
 
 	// Get updated order
@@ -489,7 +610,7 @@ func processPayment(w http.ResponseWriter, r *http.Request) {
 func reduceProductStock(productID int, quantity int) error {
 	// Call product service to reduce stock
 	client := &http.Client{Timeout: 5 * time.Second}
-	
+
 	// Get the product service URL from environment or use default
 	productServiceURL := os.Getenv("PRODUCT_SERVICE_URL")
 	if productServiceURL == "" {

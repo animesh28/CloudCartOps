@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram, Gauge, CollectorRegistry
+from prometheus_client import Counter, Histogram, Gauge, CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST
 import time
 
 # Chaos Service Prometheus Metrics
@@ -48,6 +48,31 @@ chaos_config_updates_total = Counter(
 
 latency_injections_total = Counter(
     'latency_injections_total',
+    'Total latency injections',
+    registry=registry
+)
+
+latency_injection_duration_ms = Histogram(
+    'latency_injection_duration_ms',
+    'Duration of injected latency in milliseconds',
+    buckets=(100, 500, 1000, 2000, 3000, 5000),
+    registry=registry
+)
+
+error_injections_total = Counter(
+    'error_injections_total',
+    'Total error injections',
+    labelnames=['error_code'],
+    registry=registry
+)
+
+def get_metrics():
+    """Generate Prometheus metrics in text format"""
+    return generate_latest(registry)
+
+def get_content_type():
+    """Return the content type for Prometheus metrics"""
+    return CONTENT_TYPE_LATEST
     'Total latency chaos injections',
     registry=registry
 )

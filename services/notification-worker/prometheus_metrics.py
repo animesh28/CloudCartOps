@@ -48,6 +48,10 @@ messages_failed_total = Counter(
 message_processing_duration_seconds = Histogram(
     'notification_message_processing_duration_seconds',
     'Message processing duration',
+    labelnames=['topic'],
+    buckets=(0.01, 0.05, 0.1, 0.5, 1, 2, 5),
+    registry=registry
+)
     labelnames=['topic', 'event_type'],
     buckets=(0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10),
     registry=registry

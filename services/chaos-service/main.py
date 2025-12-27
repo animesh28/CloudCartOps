@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional
 import random
@@ -7,6 +8,7 @@ import time
 import os
 from datetime import datetime
 from kafka_producer import publish_event
+import prometheus_metrics
 
 app = FastAPI(title="Chaos Service", version="1.0.0")
 
@@ -38,6 +40,14 @@ def health_check():
         "timestamp": datetime.utcnow().isoformat()
     }
 
+@app.get("/metrics")
+def metrics():
+    """Prometheus metrics endpoint"""
+    return Response(
+        content=prometheus_metrics.get_metrics(),
+        media_type=prometheus_metrics.get_content_type()
+    )
+
 @app.get("/chaos/config")
 def get_chaos_config():
     return {
@@ -49,23 +59,62 @@ def get_chaos_config():
 def update_chaos_config(config: ChaosConfig):
     global chaos_config
     chaos_config = config
-    return {
-        "message": "Chaos configuration updated",
-        "config": chaos_config.dict()
-    }
-
-@app.post("/chaos/inject/latency")
-def inject_latency(min_ms: int = 100, max_ms: int = 3000):
-    """Inject random latency"""
+    start_time = time.time()
+    
     if not CHAOS_ENABLED:
+        prometheus_metrics.http_requests_total.labels(
+            method='POST', endpoint='/chaos/inject/latency', status='200'
+        ).inc()
         return {"message": "Chaos is disabled"}
     
     delay_ms = random.randint(min_ms, max_ms)
     time.sleep(delay_ms / 1000)
     
+    # Record metrics
+    prometheus_metrics.chaos_injections_total.labels(
+        injection_type='latency', status='success'
+    ).inc()
+    prometheus_metrics.latency_injections_total.inc()
+    prometheus_metrics.latency_injection_duration_ms.observe(delay_ms)
+    
     publish_event('chaos.injected', {
         'chaos_type': 'latency',
         'details': f'Injected {delay_ms}ms delay',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+    
+    duration = time.time() - start_time
+    prometheus_metrics.http_requests_total.labels(
+        method='POST', endpoint='/chaos/inject/latency', status='200'
+    ).inc()
+    prometheus_metrics.request_duration_seconds.labels(
+    start_time = time.time()
+    
+    if not CHAOS_ENABLED:
+        prometheus_metrics.http_requests_total.labels(
+            method='POST', endpoint='/chaos/inject/error', status='200'
+        ).inc()
+        return {"message": "Chaos is disabled"}
+    
+    # Record metrics
+    prometheus_metrics.chaos_injections_total.labels(
+        injection_type='error', status='success'
+    ).inc()
+    prometheus_metrics.error_injections_total.labels(error_code=str(error_code)).inc()
+    
+    publish_event('chaos.injected', {
+        'chaos_type': 'error',
+        'details': f'HTTP {error_code}: {message}',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+    
+    duration = time.time() - start_time
+    prometheus_metrics.http_requests_total.labels(
+        method='POST', endpoint='/chaos/inject/error', status=str(error_code)
+    ).inc()
+    prometheus_metrics.request_duration_seconds.labels(
+        method='POST', endpoint='/chaos/inject/error'
+    ).observe(duration   'details': f'Injected {delay_ms}ms delay',
         'timestamp': datetime.utcnow().isoformat()
     })
     
