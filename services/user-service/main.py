@@ -102,8 +102,8 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
    finally:
        db.close()
 
-@app.post("/login")
-def login_user(creds: schemas.PasswordValidation, db: Session = Depends(get_db)):
+@app.post("/auth/validate-password")
+def validate_password(creds: schemas.PasswordValidation, db: Session = Depends(get_db)):
    start_time = time.time()
    try:
        user = db.query(models.User).filter(models.User.username == creds.username).first()
@@ -134,8 +134,8 @@ def login_user(creds: schemas.PasswordValidation, db: Session = Depends(get_db))
        prometheus_metrics.auth_success_total.inc()
       
        duration = time.time() - start_time
-       prometheus_metrics.http_requests_total.labels(method='POST', endpoint='/login', status='200').inc()
-       prometheus_metrics.request_duration_seconds.labels(method='POST', endpoint='/login').observe(duration)
+       prometheus_metrics.http_requests_total.labels(method='POST', endpoint='/auth/validate-password', status='200').inc()
+       prometheus_metrics.request_duration_seconds.labels(method='POST', endpoint='/auth/validate-password').observe(duration)
       
        # Return user data if password is valid
        return {
@@ -149,8 +149,51 @@ def login_user(creds: schemas.PasswordValidation, db: Session = Depends(get_db))
            }
        }
    except Exception as e:
-       prometheus_metrics.errors_total.labels(error_type=type(e).__name__, endpoint='/login').inc()
-       prometheus_metrics.http_requests_total.labels(method='POST', endpoint='/login', status='500').inc()
+       prometheus_metrics.errors_total.labels(error_type=type(e).__name__, endpoint='/auth/validate-password').inc()
+       prometheus_metrics.http_requests_total.labels(method='POST', endpoint='/auth/validate-password', status='500').inc()
+       raise
+   finally:
+       db.close()
+
+@app.get("/users", response_model=List[schemas.UserResponse])
+def get_all_users(db: Session = Depends(get_db)):
+   """Get all users - for admin purposes"""
+   start_time = time.time()
+   try:
+       users = db.query(models.User).all()
+      
+       duration = time.time() - start_time
+       prometheus_metrics.http_requests_total.labels(method='GET', endpoint='/users', status='200').inc()
+       prometheus_metrics.request_duration_seconds.labels(method='GET', endpoint='/users').observe(duration)
+      
+       return users
+   except Exception as e:
+       prometheus_metrics.errors_total.labels(error_type=type(e).__name__, endpoint='/users').inc()
+       prometheus_metrics.http_requests_total.labels(method='GET', endpoint='/users', status='500').inc()
+       raise
+   finally:
+       db.close()
+
+@app.get("/users/{user_id}", response_model=schemas.UserResponse)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+   """Get user by ID - used for token validation"""
+   start_time = time.time()
+   try:
+       db_user = db.query(models.User).filter(models.User.id == user_id).first()
+       if not db_user:
+           prometheus_metrics.http_requests_total.labels(method='GET', endpoint='/users/<id>', status='404').inc()
+           raise HTTPException(status_code=404, detail="User not found")
+      
+       duration = time.time() - start_time
+       prometheus_metrics.http_requests_total.labels(method='GET', endpoint='/users/<id>', status='200').inc()
+       prometheus_metrics.request_duration_seconds.labels(method='GET', endpoint='/users/<id>').observe(duration)
+      
+       return db_user
+   except HTTPException:
+       raise
+   except Exception as e:
+       prometheus_metrics.errors_total.labels(error_type=type(e).__name__, endpoint='/users/<id>').inc()
+       prometheus_metrics.http_requests_total.labels(method='GET', endpoint='/users/<id>', status='500').inc()
        raise
    finally:
        db.close()
