@@ -34,22 +34,24 @@ jobs:
 
       - name: Wait for API and Frontend endpoints
         run: |
-          endpoints=(
-            "http://localhost:3000/health"      # api-gateway
-            "http://localhost:8001/health"      # user-service
-            "http://localhost:8002/health"      # product-service
-            "http://localhost:8003/health"      # order-service
-            "http://localhost:8004/health"      # chaos-service
-            "http://localhost:3001/"            # frontend
+          declare -A services
+          services=(
+            ["api-gateway"]="http://localhost:3000/health"
+            ["user-service"]="http://localhost:8001/health"
+            ["product-service"]="http://localhost:8002/health"
+            ["order-service"]="http://localhost:8003/health"
+            ["chaos-service"]="http://localhost:8004/health"
+            ["frontend"]="http://localhost:3001/"
           )
 
-          for url in "${endpoints[@]}"; do
-            echo "Waiting for $url..."
+          for name in "${!services[@]}"; do
+            url=${services[$name]}
+            echo "Waiting for $name ($url)..."
             until curl -s -f $url; do
               sleep 2
             done
-            echo "$url is ready!"
+            echo "$name is ready!"
           done
 
       - name: Stop services
-        run: docker-compose down
+        run: docker compose down
