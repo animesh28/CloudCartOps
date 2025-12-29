@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  Health_Check:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,7 +20,7 @@ jobs:
         uses: docker/setup-compose-action@v1.2.0
 
       - name: Build and start services
-        run: docker-compose up -d --build
+        run: docker compose up -d --build
 
       - name: Wait for infrastructure services
         run: |
