@@ -1,0 +1,52 @@
+name: CloudCartOps CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start services
+        run: docker-compose up -d --build
+
+      - name: Wait for infrastructure services
+        run: |
+          for svc in cloudcart-postgres cloudcart-redis cloudcart-kafka; do
+            echo "Waiting for $svc..."
+            until [ "$(docker inspect --format='{{.State.Health.Status}}' $svc)" == "healthy" ]; do
+              sleep 2
+            done
+            echo "$svc is healthy!"
+          done
+
+      - name: Wait for API and Frontend endpoints
+        run: |
+          endpoints=(
+            "http://localhost:3000/health"      # api-gateway
+            "http://localhost:8001/health"      # user-service
+            "http://localhost:8002/health"      # product-service
+            "http://localhost:8003/health"      # order-service
+            "http://localhost:8004/health"      # chaos-service
+            "http://localhost:3001/"            # frontend
+          )
+
+          for url in "${endpoints[@]}"; do
+            echo "Waiting for $url..."
+            until curl -s -f $url; do
+              sleep 2
+            done
+            echo "$url is ready!"
+          done
+
+      - name: Stop services
+        run: docker-compose down
