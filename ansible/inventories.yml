@@ -1,0 +1,9 @@
+
+
+all:
+  children:
+    cicd:
+      hosts:
+        jenkins:
+          role: cd-node
+          owner: animesh28

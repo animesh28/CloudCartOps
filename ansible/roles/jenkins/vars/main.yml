@@ -1,0 +1,4 @@
+java_package: "openjdk-21-jre"
+jenkins_repo_url: "https://pkg.jenkins.io/debian-stable"
+jenkins_key_url: "https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key"
+jenkins_key_path: "/etc/apt/keyrings/jenkins-keyring.asc"
