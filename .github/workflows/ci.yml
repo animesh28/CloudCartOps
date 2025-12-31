@@ -12,8 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v6
+
       - name: Set up Docker Compose
         uses: docker/setup-compose-action@v1.2.0
 
@@ -100,11 +100,24 @@ jobs:
         if: always()
         run: docker compose down -v
 
+  codeql_scan:
+    name: CodeQL Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, python, go
+          paths: services
+      - name: Perform CodeQL Scan
+        uses: github/codeql-action/analyze@v3
+
 
   api_gateway_build:
-    name: Build & Push API Gateway
+    name: Build, Scan & Push API Gateway
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -116,7 +129,7 @@ jobs:
         with:
           context: ./services/api-gateway
           file: ./services/api-gateway/Dockerfile
-          push: true
+          load: true
           tags: anisingh28/cloudcartops-api-gateway:latest
           build-args: |
             PORT=3000
@@ -128,11 +141,22 @@ jobs:
             JWT_SECRET=your-super-secret-jwt-key-change-in-production
             RATE_LIMIT_WINDOW=60000
             RATE_LIMIT_MAX_REQUESTS=100
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: anisingh28/cloudcartops-api-gateway:latest
+          exit-code: '1'
+          severity: CRITICAL
+      - uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./services/api-gateway
+          file: ./services/api-gateway/Dockerfile
+          push: true
+          tags: anisingh28/cloudcartops-api-gateway:latest
 
   user_service_build:
-    name: Build & Push User Service
+    name: Build, Scan & Push User Service
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -144,18 +168,29 @@ jobs:
         with:
           context: ./services/user-service
           file: ./services/user-service/Dockerfile
-          push: true
+          load: true
           tags: anisingh28/cloudcartops-user-service:latest
           build-args: |
             PORT=8001
             DATABASE_URL=postgresql://cloudcart:cloudcart123@postgres:5432/cloudcart?sslmode=disable
             KAFKA_BOOTSTRAP_SERVERS=kafka:29092
             SERVICE_NAME=user-service
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: anisingh28/cloudcartops-user-service:latest
+          exit-code: '1'
+          severity: CRITICAL
+      - uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./services/user-service
+          file: ./services/user-service/Dockerfile
+          push: true
+          tags: anisingh28/cloudcartops-user-service:latest
 
   product_service_build:
-    name: Build & Push Product Service
+    name: Build, Scan & Push Product Service
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -167,18 +202,29 @@ jobs:
         with:
           context: ./services/product-service
           file: ./services/product-service/Dockerfile
-          push: true
+          load: true
           tags: anisingh28/cloudcartops-product-service:latest
           build-args: |
             PORT=8002
             DATABASE_URL=postgresql://cloudcart:cloudcart123@postgres:5432/cloudcart?sslmode=disable
             KAFKA_BOOTSTRAP_SERVERS=kafka:29092
             SERVICE_NAME=product-service
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: anisingh28/cloudcartops-product-service:latest
+          exit-code: '1'
+          severity: CRITICAL
+      - uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./services/product-service
+          file: ./services/product-service/Dockerfile
+          push: true
+          tags: anisingh28/cloudcartops-product-service:latest
 
   order_service_build:
-    name: Build & Push Order Service
+    name: Build, Scan & Push Order Service
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -190,18 +236,29 @@ jobs:
         with:
           context: ./services/order-service
           file: ./services/order-service/Dockerfile
-          push: true
+          load: true
           tags: anisingh28/cloudcartops-order-service:latest
           build-args: |
             PORT=8003
             DATABASE_URL=postgresql://cloudcart:cloudcart123@postgres:5432/cloudcart?sslmode=disable
             KAFKA_BOOTSTRAP_SERVERS=kafka:29092
             SERVICE_NAME=order-service
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: anisingh28/cloudcartops-order-service:latest
+          exit-code: '1'
+          severity: CRITICAL
+      - uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./services/order-service
+          file: ./services/order-service/Dockerfile
+          push: true
+          tags: anisingh28/cloudcartops-order-service:latest
 
   chaos_service_build:
-    name: Build & Push Chaos Service
+    name: Build, Scan & Push Chaos Service
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -213,18 +270,29 @@ jobs:
         with:
           context: ./services/chaos-service
           file: ./services/chaos-service/Dockerfile
-          push: true
+          load: true
           tags: anisingh28/cloudcartops-chaos-service:latest
           build-args: |
             PORT=8003
             KAFKA_BOOTSTRAP_SERVERS=kafka:29092
             CHAOS_ENABLED=true
             SERVICE_NAME=chaos-service
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: anisingh28/cloudcartops-chaos-service:latest
+          exit-code: '1'
+          severity: CRITICAL
+      - uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./services/chaos-service
+          file: ./services/chaos-service/Dockerfile
+          push: true
+          tags: anisingh28/cloudcartops-chaos-service:latest
 
   notification_worker_build:
-    name: Build & Push Notification Worker
+    name: Build, Scan & Push Notification Worker
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -236,18 +304,29 @@ jobs:
         with:
           context: ./services/notification-worker
           file: ./services/notification-worker/Dockerfile
-          push: true
+          load: true
           tags: anisingh28/cloudcartops-notification-worker:latest
           build-args: |
             KAFKA_BOOTSTRAP_SERVERS=kafka:29092
             KAFKA_GROUP_ID=notification-worker-group
             SERVICE_NAME=notification-worker
             METRICS_PORT=8005
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: anisingh28/cloudcartops-notification-worker:latest
+          exit-code: '1'
+          severity: CRITICAL
+      - uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./services/notification-worker
+          file: ./services/notification-worker/Dockerfile
+          push: true
+          tags: anisingh28/cloudcartops-notification-worker:latest
 
   metrics_generator_build:
-    name: Build & Push Metrics Generator
+    name: Build, Scan & Push Metrics Generator
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -259,17 +338,28 @@ jobs:
         with:
           context: ./services/metrics-generator
           file: ./services/metrics-generator/Dockerfile
-          push: true
+          load: true
           tags: anisingh28/cloudcartops-metrics-generator:latest
           build-args: |
             API_GATEWAY_URL=http://api-gateway:3000
             SERVICE_NAME=metrics-generator
             INTERVAL_SECONDS=5
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: anisingh28/cloudcartops-metrics-generator:latest
+          exit-code: '1'
+          severity: CRITICAL
+      - uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./services/metrics-generator
+          file: ./services/metrics-generator/Dockerfile
+          push: true
+          tags: anisingh28/cloudcartops-metrics-generator:latest
 
   frontend_build:
-    name: Build & Push Frontend
+    name: Build, Scan & Push Frontend
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -281,7 +371,18 @@ jobs:
         with:
           context: ./services/frontend
           file: ./services/frontend/Dockerfile
-          push: true
+          load: true
           tags: anisingh28/cloudcartops-frontend:latest
           build-args: |
             API_GATEWAY_URL=http://api-gateway:3000
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: anisingh28/cloudcartops-frontend:latest
+          exit-code: '1'
+          severity: CRITICAL
+      - uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./services/frontend
+          file: ./services/frontend/Dockerfile
+          push: true
+          tags: anisingh28/cloudcartops-frontend:latest
