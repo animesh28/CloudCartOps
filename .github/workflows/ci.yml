@@ -126,11 +126,10 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
       - uses: docker/build-push-action@v6.18.0
-        id: api_build
         with:
           context: ./services/api-gateway
           file: ./services/api-gateway/Dockerfile
-          push: false
+          load: true
           tags: anisingh28/cloudcartops-api-gateway:latest
           build-args: |
             PORT=3000
@@ -145,12 +144,12 @@ jobs:
       - uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: anisingh28/cloudcartops-api-gateway:latest
-          format: table
           exit-code: '1'
-          vuln-type: os,library
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
+          context: ./services/api-gateway
+          file: ./services/api-gateway/Dockerfile
           push: true
           tags: anisingh28/cloudcartops-api-gateway:latest
 
@@ -169,7 +168,7 @@ jobs:
         with:
           context: ./services/user-service
           file: ./services/user-service/Dockerfile
-          push: false
+          load: true
           tags: anisingh28/cloudcartops-user-service:latest
           build-args: |
             PORT=8001
@@ -179,12 +178,12 @@ jobs:
       - uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: anisingh28/cloudcartops-user-service:latest
-          format: table
           exit-code: '1'
-          vuln-type: os,library
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
+          context: ./services/user-service
+          file: ./services/user-service/Dockerfile
           push: true
           tags: anisingh28/cloudcartops-user-service:latest
 
@@ -203,7 +202,7 @@ jobs:
         with:
           context: ./services/product-service
           file: ./services/product-service/Dockerfile
-          push: false
+          load: true
           tags: anisingh28/cloudcartops-product-service:latest
           build-args: |
             PORT=8002
@@ -213,12 +212,12 @@ jobs:
       - uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: anisingh28/cloudcartops-product-service:latest
-          format: table
           exit-code: '1'
-          vuln-type: os,library
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
+          context: ./services/product-service
+          file: ./services/product-service/Dockerfile
           push: true
           tags: anisingh28/cloudcartops-product-service:latest
 
@@ -237,7 +236,7 @@ jobs:
         with:
           context: ./services/order-service
           file: ./services/order-service/Dockerfile
-          push: false
+          load: true
           tags: anisingh28/cloudcartops-order-service:latest
           build-args: |
             PORT=8003
@@ -247,12 +246,12 @@ jobs:
       - uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: anisingh28/cloudcartops-order-service:latest
-          format: table
           exit-code: '1'
-          vuln-type: os,library
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
+          context: ./services/order-service
+          file: ./services/order-service/Dockerfile
           push: true
           tags: anisingh28/cloudcartops-order-service:latest
 
@@ -271,7 +270,7 @@ jobs:
         with:
           context: ./services/chaos-service
           file: ./services/chaos-service/Dockerfile
-          push: false
+          load: true
           tags: anisingh28/cloudcartops-chaos-service:latest
           build-args: |
             PORT=8003
@@ -281,12 +280,12 @@ jobs:
       - uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: anisingh28/cloudcartops-chaos-service:latest
-          format: table
           exit-code: '1'
-          vuln-type: os,library
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
+          context: ./services/chaos-service
+          file: ./services/chaos-service/Dockerfile
           push: true
           tags: anisingh28/cloudcartops-chaos-service:latest
 
@@ -305,7 +304,7 @@ jobs:
         with:
           context: ./services/notification-worker
           file: ./services/notification-worker/Dockerfile
-          push: false
+          load: true
           tags: anisingh28/cloudcartops-notification-worker:latest
           build-args: |
             KAFKA_BOOTSTRAP_SERVERS=kafka:29092
@@ -315,12 +314,12 @@ jobs:
       - uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: anisingh28/cloudcartops-notification-worker:latest
-          format: table
           exit-code: '1'
-          vuln-type: os,library
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
+          context: ./services/notification-worker
+          file: ./services/notification-worker/Dockerfile
           push: true
           tags: anisingh28/cloudcartops-notification-worker:latest
 
@@ -339,7 +338,7 @@ jobs:
         with:
           context: ./services/metrics-generator
           file: ./services/metrics-generator/Dockerfile
-          push: false
+          load: true
           tags: anisingh28/cloudcartops-metrics-generator:latest
           build-args: |
             API_GATEWAY_URL=http://api-gateway:3000
@@ -348,12 +347,12 @@ jobs:
       - uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: anisingh28/cloudcartops-metrics-generator:latest
-          format: table
           exit-code: '1'
-          vuln-type: os,library
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
+          context: ./services/metrics-generator
+          file: ./services/metrics-generator/Dockerfile
           push: true
           tags: anisingh28/cloudcartops-metrics-generator:latest
 
@@ -372,19 +371,18 @@ jobs:
         with:
           context: ./services/frontend
           file: ./services/frontend/Dockerfile
-          push: false
+          load: true
           tags: anisingh28/cloudcartops-frontend:latest
           build-args: |
             API_GATEWAY_URL=http://api-gateway:3000
       - uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: anisingh28/cloudcartops-frontend:latest
-          format: table
           exit-code: '1'
-          vuln-type: os,library
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
+          context: ./services/frontend
+          file: ./services/frontend/Dockerfile
           push: true
           tags: anisingh28/cloudcartops-frontend:latest
-
