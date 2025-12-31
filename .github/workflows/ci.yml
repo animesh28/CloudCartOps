@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Set up Docker Compose
         uses: docker/setup-compose-action@v1.2.0
@@ -104,7 +104,7 @@ jobs:
     name: CodeQL Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
@@ -117,7 +117,7 @@ jobs:
     name: Dependency Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Set up Java for OWASP Dependency-Check
         uses: actions/setup-java@v3
         with:
@@ -131,7 +131,7 @@ jobs:
             dependency-check --project "$dir" --scan "$dir" --format "ALL" --out "dependency-reports/$(basename $dir)"
           done
       - name: Upload Dependency Reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v6
         with:
           name: dependency-reports
           path: dependency-reports/
