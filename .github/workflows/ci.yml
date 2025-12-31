@@ -151,6 +151,7 @@ jobs:
           exit-code: '1'
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
+        if: github.ref == 'refs/heads/main'
         with:
           context: ./services/api-gateway
           file: ./services/api-gateway/Dockerfile
@@ -185,6 +186,7 @@ jobs:
           exit-code: '1'
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
+        if: github.ref == 'refs/heads/main'
         with:
           context: ./services/user-service
           file: ./services/user-service/Dockerfile
@@ -219,6 +221,7 @@ jobs:
           exit-code: '1'
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
+        if: github.ref == 'refs/heads/main'
         with:
           context: ./services/product-service
           file: ./services/product-service/Dockerfile
@@ -253,6 +256,7 @@ jobs:
           exit-code: '1'
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
+        if: github.ref == 'refs/heads/main'
         with:
           context: ./services/order-service
           file: ./services/order-service/Dockerfile
@@ -287,6 +291,7 @@ jobs:
           exit-code: '1'
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
+        if: github.ref == 'refs/heads/main'
         with:
           context: ./services/chaos-service
           file: ./services/chaos-service/Dockerfile
@@ -321,6 +326,7 @@ jobs:
           exit-code: '1'
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
+        if: github.ref == 'refs/heads/main'
         with:
           context: ./services/notification-worker
           file: ./services/notification-worker/Dockerfile
@@ -354,6 +360,7 @@ jobs:
           exit-code: '1'
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
+        if: github.ref == 'refs/heads/main'
         with:
           context: ./services/metrics-generator
           file: ./services/metrics-generator/Dockerfile
@@ -385,6 +392,7 @@ jobs:
           exit-code: '1'
           severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
+        if: github.ref == 'refs/heads/main'
         with:
           context: ./services/frontend
           file: ./services/frontend/Dockerfile
