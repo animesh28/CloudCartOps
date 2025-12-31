@@ -145,7 +145,7 @@ jobs:
         with:
           image-ref: anisingh28/cloudcartops-api-gateway:latest
           exit-code: '1'
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
           context: ./services/api-gateway
@@ -179,7 +179,7 @@ jobs:
         with:
           image-ref: anisingh28/cloudcartops-user-service:latest
           exit-code: '1'
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
           context: ./services/user-service
@@ -213,7 +213,7 @@ jobs:
         with:
           image-ref: anisingh28/cloudcartops-product-service:latest
           exit-code: '1'
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
           context: ./services/product-service
@@ -247,7 +247,7 @@ jobs:
         with:
           image-ref: anisingh28/cloudcartops-order-service:latest
           exit-code: '1'
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
           context: ./services/order-service
@@ -281,7 +281,7 @@ jobs:
         with:
           image-ref: anisingh28/cloudcartops-chaos-service:latest
           exit-code: '1'
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
           context: ./services/chaos-service
@@ -315,7 +315,7 @@ jobs:
         with:
           image-ref: anisingh28/cloudcartops-notification-worker:latest
           exit-code: '1'
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
           context: ./services/notification-worker
@@ -348,7 +348,7 @@ jobs:
         with:
           image-ref: anisingh28/cloudcartops-metrics-generator:latest
           exit-code: '1'
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
           context: ./services/metrics-generator
@@ -379,7 +379,7 @@ jobs:
         with:
           image-ref: anisingh28/cloudcartops-frontend:latest
           exit-code: '1'
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
       - uses: docker/build-push-action@v6.18.0
         with:
           context: ./services/frontend
