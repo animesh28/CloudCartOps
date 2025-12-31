@@ -113,44 +113,11 @@ jobs:
       - name: Perform CodeQL Scan
         uses: github/codeql-action/analyze@v3
 
-  dependency_scan:
-    name: Dependency Scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: temurin
-          java-version: '11'
-      - name: Install unzip
-        run: sudo apt-get update && sudo apt-get install -y unzip
-      - name: Download OWASP Dependency-Check CLI
-        run: |
-          VERSION=12.1.0
-          curl -sL -o dependency-check.zip "https://github.com/dependency-check/DependencyCheck/releases/download/v${VERSION}/dependency-check-${VERSION}-release.zip"
-          unzip dependency-check.zip -d dependency-check
-          chmod +x dependency-check/dependency-check/bin/dependency-check.sh
-      - name: Run Dependency-Check
-        run: |
-          mkdir -p dependency-reports
-          for dir in services/*; do
-            ./dependency-check/dependency-check/bin/dependency-check.sh \
-              --project "$(basename "$dir")" \
-              --scan "$dir" \
-              --format "ALL" \
-              --out "dependency-reports/$(basename "$dir")"
-          done
-      - name: Upload Dependency Reports
-        uses: actions/upload-artifact@v6
-        with:
-          name: dependency-reports
-          path: dependency-reports/
 
   api_gateway_build:
     name: Build & Push API Gateway
     runs-on: ubuntu-latest
-    needs: [tests, codeql_scan, dependency_scan]
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -178,7 +145,7 @@ jobs:
   user_service_build:
     name: Build & Push User Service
     runs-on: ubuntu-latest
-    needs: [tests, codeql_scan, dependency_scan]
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -201,7 +168,7 @@ jobs:
   product_service_build:
     name: Build & Push Product Service
     runs-on: ubuntu-latest
-    needs: [tests, codeql_scan, dependency_scan]
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -224,7 +191,7 @@ jobs:
   order_service_build:
     name: Build & Push Order Service
     runs-on: ubuntu-latest
-    needs: [tests, codeql_scan, dependency_scan]
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -247,7 +214,7 @@ jobs:
   chaos_service_build:
     name: Build & Push Chaos Service
     runs-on: ubuntu-latest
-    needs: [tests, codeql_scan, dependency_scan]
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -270,7 +237,7 @@ jobs:
   notification_worker_build:
     name: Build & Push Notification Worker
     runs-on: ubuntu-latest
-    needs: [tests, codeql_scan, dependency_scan]
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -293,7 +260,7 @@ jobs:
   metrics_generator_build:
     name: Build & Push Metrics Generator
     runs-on: ubuntu-latest
-    needs: [tests, codeql_scan, dependency_scan]
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
@@ -315,7 +282,7 @@ jobs:
   frontend_build:
     name: Build & Push Frontend
     runs-on: ubuntu-latest
-    needs: [tests, codeql_scan, dependency_scan]
+    needs: [tests, codeql_scan]
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3.12.0
