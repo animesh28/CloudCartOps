@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  health_check:
-    name: Unit Tests and Healthcheck
+  tests:
+    name: Unit and Integration Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -51,8 +51,55 @@ jobs:
             echo "$name is ready!"
           done
 
-      - name: Stop services
-        run: docker compose down
+      - name: Run user-service tests
+        run: docker-compose exec -T user-service bash -c "cd /app && python -m pytest tests/test_users.py -v --tb=short"
+
+      - name: Run product-service tests
+        run: docker-compose exec -T product-service bash -c "cd /app && python -m pytest tests/test_products.py -v --tb=short"
+
+      - name: Run chaos-service tests
+        run: docker-compose exec -T chaos-service bash -c "cd /app && python -m pytest tests/test_chaos.py -v --tb=short"
+
+      - name: Run notification-worker tests
+        run: docker-compose exec -T notification-worker bash -c "cd /app && python -m pytest tests/test_worker.py -v --tb=short"
+
+      - name: Run order-service tests
+        run: docker-compose exec -T order-service sh -c "cd /app && go test ./tests/... -v"
+
+      - name: Run api-gateway tests
+        run: docker-compose exec -T api-gateway sh -c "cd /app && npm test"
+
+      - name: Install jq for integration tests
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run integration tests
+        run: |
+          chmod +x tests/app_scenarios.sh
+          ./tests/app_scenarios.sh
+
+      - name: Show service logs on failure
+        if: failure()
+        run: |
+          echo "=== API Gateway Logs ==="
+          docker-compose logs api-gateway --tail=100
+          echo "=== User Service Logs ==="
+          docker-compose logs user-service --tail=100
+          echo "=== Product Service Logs ==="
+          docker-compose logs product-service --tail=100
+          echo "=== Order Service Logs ==="
+          docker-compose logs order-service --tail=100
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "========================================="
+          echo "✓ CloudCartOps Test Suite Complete"
+          echo "========================================="
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose down -v
+
 
   api_gateway_build:
     name: Build & Push API Gateway
