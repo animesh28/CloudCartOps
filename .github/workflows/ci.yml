@@ -142,7 +142,7 @@ jobs:
             JWT_SECRET=your-super-secret-jwt-key-change-in-production
             RATE_LIMIT_WINDOW=60000
             RATE_LIMIT_MAX_REQUESTS=100
-      - uses: aquasecurity/trivy-action@v1
+      - uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: anisingh28/cloudcartops-api-gateway:latest
           format: table
@@ -175,7 +175,7 @@ jobs:
             DATABASE_URL=postgresql://cloudcart:cloudcart123@postgres:5432/cloudcart?sslmode=disable
             KAFKA_BOOTSTRAP_SERVERS=kafka:29092
             SERVICE_NAME=user-service
-      - uses: aquasecurity/trivy-action@v1
+      - uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: anisingh28/cloudcartops-user-service:latest
           format: table
@@ -208,7 +208,7 @@ jobs:
             DATABASE_URL=postgresql://cloudcart:cloudcart123@postgres:5432/cloudcart?sslmode=disable
             KAFKA_BOOTSTRAP_SERVERS=kafka:29092
             SERVICE_NAME=product-service
-      - uses: aquasecurity/trivy-action@v1
+      - uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: anisingh28/cloudcartops-product-service:latest
           format: table
@@ -241,7 +241,7 @@ jobs:
             DATABASE_URL=postgresql://cloudcart:cloudcart123@postgres:5432/cloudcart?sslmode=disable
             KAFKA_BOOTSTRAP_SERVERS=kafka:29092
             SERVICE_NAME=order-service
-      - uses: aquasecurity/trivy-action@v1
+      - uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: anisingh28/cloudcartops-order-service:latest
           format: table
@@ -274,7 +274,7 @@ jobs:
             KAFKA_BOOTSTRAP_SERVERS=kafka:29092
             CHAOS_ENABLED=true
             SERVICE_NAME=chaos-service
-      - uses: aquasecurity/trivy-action@v1
+      - uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: anisingh28/cloudcartops-chaos-service:latest
           format: table
@@ -307,7 +307,7 @@ jobs:
             KAFKA_GROUP_ID=notification-worker-group
             SERVICE_NAME=notification-worker
             METRICS_PORT=8005
-      - uses: aquasecurity/trivy-action@v1
+      - uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: anisingh28/cloudcartops-notification-worker:latest
           format: table
@@ -339,7 +339,7 @@ jobs:
             API_GATEWAY_URL=http://api-gateway:3000
             SERVICE_NAME=metrics-generator
             INTERVAL_SECONDS=5
-      - uses: aquasecurity/trivy-action@v1
+      - uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: anisingh28/cloudcartops-metrics-generator:latest
           format: table
@@ -369,7 +369,7 @@ jobs:
           tags: anisingh28/cloudcartops-frontend:latest
           build-args: |
             API_GATEWAY_URL=http://api-gateway:3000
-      - uses: aquasecurity/trivy-action@v1
+      - uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: anisingh28/cloudcartops-frontend:latest
           format: table
