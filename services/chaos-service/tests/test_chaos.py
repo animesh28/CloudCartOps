@@ -99,10 +99,13 @@ class TestChaosInjectionTypes:
        """Test error injection"""
        logger.info("Testing error injection")
       
+       # Enable chaos first to ensure error is actually injected
+       client.post("/chaos/enable")
+      
        response = client.post("/chaos/inject/error?error_code=503&message=TestError")
       
-       # This endpoint actually raises an error, so expect the error code
-       assert response.status_code in (500, 503)
+       # This endpoint raises an error when chaos is enabled
+       assert response.status_code == 503
        logger.info("✓ Error injection executed (correctly returned error)")
   
    def test_inject_random(self):
