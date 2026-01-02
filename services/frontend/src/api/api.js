@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+// Use relative paths - nginx in the frontend pod proxies /api to api-gateway:3000
+// This works for both K8s ingress and port-forward scenarios
+export const API_URL = '';
 
 const api = axios.create({
   baseURL: API_URL,
