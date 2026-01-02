@@ -31,6 +31,8 @@ spec:
       - name: order-service
         image: anisingh28/cloudcartops-order-service:latest
         imagePullPolicy: Always
+        command: ["/bin/sh"]
+        args: ["-c", ". /vault/secrets/database && . /vault/secrets/kafka && exec /app/main"]
         ports:
         - containerPort: 8003
           name: http

@@ -4,9 +4,9 @@ metadata:
   name: cloudcart-ingress
   namespace: cloudcart
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
   - host: cloudcart.local
     http:

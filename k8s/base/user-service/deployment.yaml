@@ -31,6 +31,8 @@ spec:
       - name: user-service
         image: anisingh28/cloudcartops-user-service:latest
         imagePullPolicy: Always
+        command: ["/bin/sh"]
+        args: ["-c", ". /vault/secrets/database && . /vault/secrets/kafka && exec python main.py"]
         ports:
         - containerPort: 8001
           name: http

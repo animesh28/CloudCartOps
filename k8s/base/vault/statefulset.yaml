@@ -29,26 +29,14 @@ spec:
           value: http://vault:8200
         - name: SKIP_SETCAP
           value: "true"
-        - name: VAULT_LOCAL_CONFIG
-          value: |
-            {
-              "backend": {
-                "file": {
-                  "path": "/vault/data"
-                }
-              },
-              "listener": {
-                "tcp": {
-                  "address": "0.0.0.0:8200",
-                  "tls_disable": 1
-                }
-              },
-              "ui": true,
-              "default_lease_ttl": "168h",
-              "max_lease_ttl": "720h"
-            }
+        - name: VAULT_DEV_ROOT_TOKEN_ID
+          value: "root"
+        - name: VAULT_DEV_LISTEN_ADDRESS
+          value: "0.0.0.0:8200"
         args:
         - server
+        - -dev
+        - -dev-root-token-id=root
         volumeMounts:
         - name: vault-data
           mountPath: /vault/data
@@ -56,16 +44,18 @@ spec:
           mountPath: /vault/config
         livenessProbe:
           httpGet:
-            path: /v1/sys/health?standbyok=true
+            path: /v1/sys/health?standbyok=true&uninitcode=204&sealedcode=204
             port: 8200
-          initialDelaySeconds: 30
+          initialDelaySeconds: 60
           periodSeconds: 10
+          failureThreshold: 5
         readinessProbe:
           httpGet:
-            path: /v1/sys/health?standbyok=true
+            path: /v1/sys/health?standbyok=true&uninitcode=204&sealedcode=204
             port: 8200
-          initialDelaySeconds: 10
+          initialDelaySeconds: 30
           periodSeconds: 5
+          failureThreshold: 3
         resources:
           requests:
             memory: "256Mi"

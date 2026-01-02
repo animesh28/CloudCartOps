@@ -31,6 +31,8 @@ spec:
       - name: api-gateway
         image: anisingh28/cloudcartops-api-gateway:latest
         imagePullPolicy: Always
+        command: ["/bin/sh"]
+        args: ["-c", ". /vault/secrets/config && . /vault/secrets/redis && exec node src/index.js"]
         ports:
         - containerPort: 3000
           name: http

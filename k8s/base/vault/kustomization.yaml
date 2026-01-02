@@ -3,5 +3,6 @@ kind: Kustomization
 
 resources:
 - serviceaccount.yaml
-  - service.yaml
-  - configmap.yaml
+- service.yaml
+- configmap.yaml
+- statefulset.yaml

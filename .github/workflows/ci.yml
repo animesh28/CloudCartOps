@@ -155,6 +155,7 @@ jobs:
         with:
           context: ./services/api-gateway
           file: ./services/api-gateway/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: anisingh28/cloudcartops-api-gateway:latest
 
@@ -190,6 +191,7 @@ jobs:
         with:
           context: ./services/user-service
           file: ./services/user-service/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: anisingh28/cloudcartops-user-service:latest
 
@@ -225,6 +227,7 @@ jobs:
         with:
           context: ./services/product-service
           file: ./services/product-service/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: anisingh28/cloudcartops-product-service:latest
 
@@ -260,6 +263,7 @@ jobs:
         with:
           context: ./services/order-service
           file: ./services/order-service/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: anisingh28/cloudcartops-order-service:latest
 
@@ -295,6 +299,7 @@ jobs:
         with:
           context: ./services/chaos-service
           file: ./services/chaos-service/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: anisingh28/cloudcartops-chaos-service:latest
 
@@ -330,6 +335,7 @@ jobs:
         with:
           context: ./services/notification-worker
           file: ./services/notification-worker/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: anisingh28/cloudcartops-notification-worker:latest
 
@@ -364,6 +370,7 @@ jobs:
         with:
           context: ./services/metrics-generator
           file: ./services/metrics-generator/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: anisingh28/cloudcartops-metrics-generator:latest
 
@@ -396,5 +403,6 @@ jobs:
         with:
           context: ./services/frontend
           file: ./services/frontend/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: anisingh28/cloudcartops-frontend:latest

@@ -10,9 +10,34 @@ echo "Initializing HashiCorp Vault for K8s"
 echo "=========================================="
 
 wait_for_vault() {
-    echo "Waiting for Vault to be ready..."
-    kubectl wait --for=condition=ready pod/${VAULT_POD} -n ${NAMESPACE} --timeout=300s
-    sleep 5
+    echo "Waiting for Vault pod to be running..."
+    # Don't wait for "ready" - Vault won't be ready until initialized
+    # Just wait for the pod to exist and be running
+    for i in {1..60}; do
+        if kubectl get pod ${VAULT_POD} -n ${NAMESPACE} &> /dev/null; then
+            POD_STATUS=$(kubectl get pod ${VAULT_POD} -n ${NAMESPACE} -o jsonpath='{.status.phase}')
+            if [ "$POD_STATUS" = "Running" ]; then
+                echo "✓ Vault pod is running"
+                sleep 5
+                return 0
+            fi
+        fi
+        echo "Waiting for Vault pod... (attempt $i/60)"
+        sleep 2
+    done
+    echo "ERROR: Vault pod did not start"
+    return 1
+}
+
+initialize_vault() {
+    echo "Using Vault in dev mode (auto-unsealed)..."
+    echo "Logging in with root token..."
+    
+    # Dev mode uses token 'root' by default
+    kubectl exec -n ${NAMESPACE} ${VAULT_POD} -- vault login root
+    
+    echo "✓ Vault ready (dev mode)"
+    echo "Root Token: root"
 }
 
 enable_kubernetes_auth() {
@@ -22,14 +47,34 @@ enable_kubernetes_auth() {
     
     KUBERNETES_HOST="https://kubernetes.default.svc"
     
+    # Get the vault service account token
+    echo "Getting Vault service account token for Kubernetes auth..."
+    TOKEN_NAME=$(kubectl get sa vault -n ${NAMESPACE} -o jsonpath='{.secrets[0].name}' 2>/dev/null)
+    
+    if [ -z "$TOKEN_NAME" ]; then
+        echo "No auto-generated token found. Creating a token for vault service account..."
+        # Kubernetes 1.24+ doesn't auto-create tokens, so we create one
+        kubectl create token vault -n ${NAMESPACE} --duration=87600h > /tmp/vault-token.txt
+        VAULT_SA_TOKEN=$(cat /tmp/vault-token.txt)
+        rm /tmp/vault-token.txt
+    else
+        echo "Using existing service account secret: $TOKEN_NAME"
+        VAULT_SA_TOKEN=$(kubectl get secret ${TOKEN_NAME} -n ${NAMESPACE} -o jsonpath='{.data.token}' | base64 -d)
+    fi
+    
+    # Get the CA certificate
+    KUBE_CA_CERT=$(kubectl exec -n ${NAMESPACE} ${VAULT_POD} -- cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
+    
+    # Configure Kubernetes auth with the token
     kubectl exec -n ${NAMESPACE} ${VAULT_POD} -- sh -c "
         vault write auth/kubernetes/config \
             kubernetes_host=\"${KUBERNETES_HOST}\" \
-            kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
-            token_reviewer_jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token
+            kubernetes_ca_cert=\"${KUBE_CA_CERT}\" \
+            token_reviewer_jwt=\"${VAULT_SA_TOKEN}\" \
+            disable_iss_validation=true
     "
     
-    echo "✓ Kubernetes auth configured"
+    echo "✓ Kubernetes auth configured with vault service account token"
 }
 
 create_secrets() {
@@ -161,6 +206,7 @@ case "${1:-all}" in
         ;;
     all)
         wait_for_vault
+        initialize_vault
         enable_kubernetes_auth
         create_secrets
         create_policies
