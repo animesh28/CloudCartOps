@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-init
+  namespace: cloudcart
+data:
+  init.sh: |
+    #!/bin/sh
+    export VAULT_ADDR=http://vault:8200
+    
+    sleep 10
+    
+    vault status > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "Initializing Vault..."
+      vault operator init -key-shares=1 -key-threshold=1 > /vault/init-keys.txt
+      
+      UNSEAL_KEY=$(grep 'Unseal Key 1:' /vault/init-keys.txt | awk '{print $NF}')
+      ROOT_TOKEN=$(grep 'Initial Root Token:' /vault/init-keys.txt | awk '{print $NF}')
+      
+      vault operator unseal $UNSEAL_KEY
+      vault login $ROOT_TOKEN
+      
+      vault secrets enable -path=cloudcart kv-v2
+      
+      vault kv put cloudcart/postgres \
+        username=cloudcart \
+        password=cloudcart123 \
+        database=cloudcart
+      
+      vault kv put cloudcart/jwt \
+        secret=your-super-secret-jwt-key-change-in-production
+      
+      vault kv put cloudcart/kafka \
+        bootstrap_servers=kafka:29092
+      
+      echo "Vault initialized successfully"
+    else
+      echo "Vault already initialized"
+    fi

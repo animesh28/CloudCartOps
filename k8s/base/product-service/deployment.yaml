@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: cloudcart
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "product-service"
+        vault.hashicorp.com/agent-inject-secret-database: "cloudcart/data/database"
+        vault.hashicorp.com/agent-inject-template-database: |
+          {{- with secret "cloudcart/data/database" -}}
+          export DATABASE_URL="{{ .Data.data.database_url }}"
+          {{- end }}
+        vault.hashicorp.com/agent-inject-secret-kafka: "cloudcart/data/kafka"
+        vault.hashicorp.com/agent-inject-template-kafka: |
+          {{- with secret "cloudcart/data/kafka" -}}
+          export KAFKA_BOOTSTRAP_SERVERS="{{ .Data.data.bootstrap_servers }}"
+          {{- end }}
+    spec:
+      serviceAccountName: product-service
+      containers:
+      - name: product-service
+        image: anisingh28/cloudcartops-product-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8002
+          name: http
+        env:
+        - name: PORT
+          value: "8002"
+        - name: DATABASE_URL
+          value: "placeholder"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka:29092
+        - name: SERVICE_NAME
+          value: product-service
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

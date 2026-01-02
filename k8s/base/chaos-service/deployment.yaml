@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chaos-service
+  namespace: cloudcart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chaos-service
+  template:
+    metadata:
+      labels:
+        app: chaos-service
+    spec:
+      containers:
+      - name: chaos-service
+        image: anisingh28/cloudcartops-chaos-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8004
+          name: http
+        env:
+        - name: PORT
+          value: "8004"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka:29092
+        - name: CHAOS_ENABLED
+          value: "true"
+        - name: SERVICE_NAME
+          value: chaos-service
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8004
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
