@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chaos-service
+  namespace: cloudcart
+spec:
+  selector:
+    app: chaos-service
+  ports:
+  - port: 8004
+    targetPort: 8004
+    name: http
+  type: ClusterIP

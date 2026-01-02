@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vault
+  namespace: cloudcart
+spec:
+  serviceName: vault
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+    spec:
+      containers:
+      - name: vault
+        image: hashicorp/vault:1.15
+        ports:
+        - containerPort: 8200
+          name: http
+        - containerPort: 8201
+          name: cluster
+        env:
+        - name: VAULT_ADDR
+          value: http://127.0.0.1:8200
+        - name: VAULT_API_ADDR
+          value: http://vault:8200
+        - name: SKIP_SETCAP
+          value: "true"
+        - name: VAULT_DEV_ROOT_TOKEN_ID
+          value: "root"
+        - name: VAULT_DEV_LISTEN_ADDRESS
+          value: "0.0.0.0:8200"
+        args:
+        - server
+        - -dev
+        - -dev-root-token-id=root
+        volumeMounts:
+        - name: vault-data
+          mountPath: /vault/data
+        - name: vault-config
+          mountPath: /vault/config
+        livenessProbe:
+          httpGet:
+            path: /v1/sys/health?standbyok=true&uninitcode=204&sealedcode=204
+            port: 8200
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /v1/sys/health?standbyok=true&uninitcode=204&sealedcode=204
+            port: 8200
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        securityContext:
+          capabilities:
+            add:
+            - IPC_LOCK
+      volumes:
+      - name: vault-config
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: vault-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: local-path
+      resources:
+        requests:
+          storage: 1Gi

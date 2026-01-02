@@ -1,0 +1,4 @@
+resources:
+- serviceaccounts.yaml
+- app-secrets.yaml
+- ingress.yaml

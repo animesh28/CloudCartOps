@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-generator
+  namespace: cloudcart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metrics-generator
+  template:
+    metadata:
+      labels:
+        app: metrics-generator
+    spec:
+      containers:
+      - name: metrics-generator
+        image: anisingh28/cloudcartops-metrics-generator:latest
+        imagePullPolicy: Always
+        env:
+        - name: API_GATEWAY_URL
+          value: http://api-gateway:3000
+        - name: SERVICE_NAME
+          value: metrics-generator
+        - name: INTERVAL_SECONDS
+          value: "5"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"

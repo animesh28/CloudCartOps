@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: cloudcart
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "postgres"
+        vault.hashicorp.com/agent-inject-secret-database: "cloudcart/data/database"
+        vault.hashicorp.com/agent-inject-template-database: |
+          {{- with secret "cloudcart/data/database" -}}
+          export POSTGRES_USER="{{ .Data.data.postgres_user }}"
+          export POSTGRES_PASSWORD="{{ .Data.data.postgres_password }}"
+          export POSTGRES_DB="{{ .Data.data.postgres_db }}"
+          {{- end }}
+    spec:
+      serviceAccountName: postgres
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        command:
+        - sh
+        - -c
+        - |
+          source /vault/secrets/database
+          exec docker-entrypoint.sh postgres
+        env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - cloudcart
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - cloudcart
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: init-script
+        configMap:
+          name: postgres-init
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: local-path
+      resources:
+        requests:
+          storage: 5Gi
