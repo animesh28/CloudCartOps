@@ -1,0 +1,9 @@
+---
+# Variables for vault-setup role
+
+k8s_namespace: cloudcart
+vault_root_token: root
+vault_dev_mode: true
+
+# SMB Mount Path (where CloudCartOps is mounted on target VM)
+smb_mount_path: /mnt/shared

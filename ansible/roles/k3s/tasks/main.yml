@@ -1,0 +1,96 @@
+---
+# Main tasks file for k3s role
+
+- name: Update apt cache
+  apt:
+    update_cache: true
+  become: true
+
+- name: Install prerequisites
+  apt:
+    name:
+      - curl
+      - apt-transport-https
+      - ca-certificates
+    state: present
+  become: true
+
+- name: Check if K3s is already installed
+  command: which k3s
+  register: k3s_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Install K3s
+  shell: |
+    curl -sfL https://get.k3s.io | sh -
+  become: true
+  when: k3s_check.rc != 0
+
+- name: Set proper permissions on kubeconfig
+  file:
+    path: /etc/rancher/k3s/k3s.yaml
+    mode: '0644'
+  become: true
+
+- name: Add KUBECONFIG to bashrc
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    line: 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml'
+    create: true
+
+- name: Wait for K3s to be ready
+  command: kubectl get nodes
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  retries: 10
+  delay: 5
+  register: result
+  until: result.rc == 0
+  become: true
+
+- name: Install kubectl
+  get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}/kubectl"
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+  become: true
+
+- name: Install Helm
+  shell: |
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  become: true
+  args:
+    creates: /usr/local/bin/helm
+
+- name: Install Kustomize
+  get_url:
+    url: "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F{{ kustomize_version }}/kustomize_{{ kustomize_version }}_linux_{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}.tar.gz"
+    dest: /tmp/kustomize.tar.gz
+  become: true
+
+- name: Extract Kustomize
+  unarchive:
+    src: /tmp/kustomize.tar.gz
+    dest: /usr/local/bin
+    remote_src: true
+  become: true
+
+- name: Set Kustomize permissions
+  file:
+    path: /usr/local/bin/kustomize
+    mode: '0755'
+  become: true
+
+- name: Verify installations
+  command: "{{ item }} version --client"
+  loop:
+    - kubectl
+    - helm
+  register: version_check
+  changed_when: false
+
+- name: Display installation versions
+  debug:
+    msg: "{{ item.stdout_lines }}"
+  loop: "{{ version_check.results }}"

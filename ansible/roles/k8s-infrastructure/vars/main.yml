@@ -1,0 +1,10 @@
+---
+# Variables for k8s-infrastructure role
+
+k8s_namespace: cloudcart
+
+# SMB Mount Path (where CloudCartOps is mounted on target VM)
+smb_mount_path: /mnt/shared
+
+# Wait timeout
+wait_timeout: 300s
