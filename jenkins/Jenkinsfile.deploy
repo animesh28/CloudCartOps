@@ -20,7 +20,7 @@ pipeline {
     }
     
     environment {
-        KUBECONFIG = '/etc/rancher/k3s/k3s.yaml'
+        KUBECONFIG = '/home/jenkins/.kube/config'
         NAMESPACE = 'cloudcart'
         DOCKER_REGISTRY = 'anisingh28'
         IMAGE_PREFIX = 'cloudcartops'

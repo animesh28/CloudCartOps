@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        KUBECONFIG = '/etc/rancher/k3s/k3s.yaml'
+        KUBECONFIG = '/home/jenkins/.kube/config'
         NAMESPACE = 'cloudcart'
     }
     
