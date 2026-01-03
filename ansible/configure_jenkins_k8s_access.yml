@@ -1,0 +1,52 @@
+---
+# Playbook to configure Jenkins VM for K8s cluster access
+# Run this AFTER setup_k3s_infrastructure.yml completes successfully
+
+- name: Configure Jenkins VM for K8s Access
+  hosts: jenkins
+  become: true
+  gather_facts: yes
+  
+  vars:
+    jenkins_user: jenkins
+    k8s_namespace: cloudcart
+  
+  pre_tasks:
+    - name: Display configuration info
+      debug:
+        msg:
+          - "==========================================="
+          - "Configuring Jenkins for K8s Access"
+          - "==========================================="
+          - "Jenkins VM: {{ inventory_hostname }}"
+          - "K3s VM: 192.168.1.8"
+          - "Jenkins User: {{ jenkins_user }}"
+          - "==========================================="
+  
+  roles:
+    - role: jenkins-k8s-access
+      tags: ['jenkins', 'kubectl', 'kubeconfig']
+  
+  post_tasks:
+    - name: Display completion message
+      debug:
+        msg:
+          - "==========================================="
+          - "Jenkins K8s Access Configuration Complete!"
+          - "==========================================="
+          - ""
+          - "Verification:"
+          - "  - kubectl installed: /usr/local/bin/kubectl"
+          - "  - kubeconfig location: /home/{{ jenkins_user }}/.kube/config"
+          - "  - K3s cluster: 192.168.1.8"
+          - ""
+          - "Test from Jenkins VM:"
+          - "  sudo su - {{ jenkins_user }}"
+          - "  kubectl get nodes"
+          - "  kubectl get pods -n {{ k8s_namespace }}"
+          - ""
+          - "Next Steps:"
+          - "  1. Configure Jenkins pipelines"
+          - "  2. Run test deployment"
+          - ""
+          - "==========================================="
