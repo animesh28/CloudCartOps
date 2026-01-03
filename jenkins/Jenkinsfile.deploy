@@ -1,0 +1,155 @@
+pipeline {
+    agent any
+    
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'prod'],
+            description: 'Deployment environment'
+        )
+        string(
+            name: 'IMAGE_TAG',
+            defaultValue: 'latest',
+            description: 'Docker image tag to deploy'
+        )
+        booleanParam(
+            name: 'SKIP_HEALTH_CHECK',
+            defaultValue: false,
+            description: 'Skip health checks after deployment'
+        )
+    }
+    
+    environment {
+        KUBECONFIG = '/home/jenkins/.kube/config'
+        NAMESPACE = 'cloudcart'
+        DOCKER_REGISTRY = 'anisingh28'
+        IMAGE_PREFIX = 'cloudcartops'
+    }
+    
+    stages {
+        stage('Pre-deployment Check') {
+            steps {
+                script {
+                    echo "Deploying to: ${params.ENVIRONMENT}"
+                    echo "Image tag: ${params.IMAGE_TAG}"
+                    
+                    sh '''
+                        kubectl cluster-info
+                        kubectl get pods -n $NAMESPACE | grep -E "vault|postgres|kafka|redis" || {
+                            echo "ERROR: Infrastructure not ready!"
+                            exit 1
+                        }
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy Application Services with Kustomize') {
+            steps {
+                script {
+                    sh """
+                        echo "Deploying all services using Kustomize overlay: ${params.ENVIRONMENT}"
+                        
+                        cd k8s/overlays/${params.ENVIRONMENT}
+                        
+                        # Use kustomize edit to set images dynamically
+                        kustomize edit set image \\
+                            cloudcart/api-gateway=${DOCKER_REGISTRY}/${IMAGE_PREFIX}-api-gateway:${params.IMAGE_TAG} \\
+                            cloudcart/user-service=${DOCKER_REGISTRY}/${IMAGE_PREFIX}-user-service:${params.IMAGE_TAG} \\
+                            cloudcart/product-service=${DOCKER_REGISTRY}/${IMAGE_PREFIX}-product-service:${params.IMAGE_TAG} \\
+                            cloudcart/order-service=${DOCKER_REGISTRY}/${IMAGE_PREFIX}-order-service:${params.IMAGE_TAG} \\
+                            cloudcart/notification-worker=${DOCKER_REGISTRY}/${IMAGE_PREFIX}-notification-worker:${params.IMAGE_TAG} \\
+                            cloudcart/chaos-service=${DOCKER_REGISTRY}/${IMAGE_PREFIX}-chaos-service:${params.IMAGE_TAG} \\
+                            cloudcart/metrics-generator=${DOCKER_REGISTRY}/${IMAGE_PREFIX}-metrics-generator:${params.IMAGE_TAG} \\
+                            cloudcart/frontend=${DOCKER_REGISTRY}/${IMAGE_PREFIX}-frontend:${params.IMAGE_TAG}
+                        
+                        # Preview the changes
+                        echo "Preview of changes:"
+                        kubectl kustomize . | head -50
+                        
+                        # Apply the kustomization
+                        kubectl apply -k .
+                    """
+                }
+            }
+        }
+        
+        stage('Wait for Rollout') {
+            steps {
+                script {
+                    sh '''
+                        echo "Waiting for deployments to complete..."
+                        
+                        kubectl rollout status deployment/api-gateway -n $NAMESPACE --timeout=300s
+                        kubectl rollout status deployment/user-service -n $NAMESPACE --timeout=300s
+                        kubectl rollout status deployment/product-service -n $NAMESPACE --timeout=300s
+                        kubectl rollout status deployment/order-service -n $NAMESPACE --timeout=300s
+                        kubectl rollout status deployment/notification-worker -n $NAMESPACE --timeout=300s
+                        kubectl rollout status deployment/chaos-service -n $NAMESPACE --timeout=300s
+                        kubectl rollout status deployment/metrics-generator -n $NAMESPACE --timeout=300s
+                        kubectl rollout status deployment/frontend -n $NAMESPACE --timeout=300s
+                        
+                        echo "✓ All deployments completed successfully!"
+                    '''
+                }
+            }
+        }
+        
+        stage('Health Checks') {
+            when {
+                expression { !params.SKIP_HEALTH_CHECK }
+            }
+            steps {
+                script {
+                    sh '''
+                        echo "Running health checks..."
+                        
+                        # Get pod names
+                        API_POD=$(kubectl get pod -l app=api-gateway -n $NAMESPACE -o jsonpath='{.items[0].metadata.name}')
+                        USER_POD=$(kubectl get pod -l app=user-service -n $NAMESPACE -o jsonpath='{.items[0].metadata.name}')
+                        PRODUCT_POD=$(kubectl get pod -l app=product-service -n $NAMESPACE -o jsonpath='{.items[0].metadata.name}')
+                        ORDER_POD=$(kubectl get pod -l app=order-service -n $NAMESPACE -o jsonpath='{.items[0].metadata.name}')
+                        
+                        # Health check API Gateway
+                        kubectl exec -n $NAMESPACE $API_POD -- wget -q -O- http://localhost:3000/health || {
+                            echo "WARNING: API Gateway health check failed"
+                        }
+                        
+                        # Health check User Service
+                        kubectl exec -n $NAMESPACE $USER_POD -- python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')" || {
+                            echo "WARNING: User Service health check failed"
+                        }
+                        
+                        # Check all pods are running
+                        kubectl get pods -n $NAMESPACE
+                        
+                        echo "✓ Health checks completed!"
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✓ Deployment successful!'
+            sh 'kubectl get pods -n $NAMESPACE -o wide'
+        }
+        failure {
+            echo '✗ Deployment failed!'
+            sh '''
+                kubectl get pods -n $NAMESPACE
+                kubectl get events -n $NAMESPACE --sort-by=.lastTimestamp | tail -30
+                
+                echo "Failed pod logs:"
+                for pod in $(kubectl get pods -n $NAMESPACE --field-selector=status.phase!=Running -o name 2>/dev/null); do
+                    echo "=== Logs for $pod ==="
+                    kubectl logs $pod -n $NAMESPACE --tail=50 || true
+                done
+            '''
+        }
+        always {
+            archiveArtifacts artifacts: '**/logs/*.log', allowEmptyArchive: true
+        }
+    }
+}

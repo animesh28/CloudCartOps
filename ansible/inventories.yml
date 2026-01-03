@@ -5,5 +5,18 @@ all:
     cicd:
       hosts:
         jenkins:
+          ansible_user: animesh
+          ansible_become: true
+          ansible_python_interpreter: /usr/bin/python3
           role: cd-node
           owner: animesh28
+          
+    k3s_cluster:
+      hosts:
+        k3s:
+          ansible_user: animesh
+          ansible_become: true
+          ansible_python_interpreter: /usr/bin/python3
+          
+  vars:
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'

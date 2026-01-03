@@ -1,0 +1,109 @@
+---
+# Main tasks file for k8s-infrastructure role
+
+- name: Verify SMB mount is accessible
+  stat:
+    path: "{{ smb_mount_path }}/k8s/base"
+  register: smb_mount_check
+  failed_when: not smb_mount_check.stat.exists
+
+- name: Display manifest path
+  debug:
+    msg: "Using K8s manifests from: {{ smb_mount_path }}/k8s/base"
+
+- name: Deploy namespace
+  command: kubectl apply -k {{ smb_mount_path }}/k8s/base/namespace/
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Deploy common resources (service accounts)
+  command: kubectl apply -f {{ smb_mount_path }}/k8s/base/common/serviceaccounts.yaml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Deploy PostgreSQL
+  command: kubectl apply -k {{ smb_mount_path }}/k8s/base/postgres/
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Wait for PostgreSQL to be ready
+  command: kubectl wait --for=condition=ready pod postgres-0 -n {{ k8s_namespace }} --timeout=300s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Verify PostgreSQL is accessible
+  command: kubectl exec -n {{ k8s_namespace }} postgres-0 -c postgres -- pg_isready -U cloudcart
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: pg_ready
+  retries: 5
+  delay: 5
+  until: pg_ready.rc == 0
+
+- name: Deploy Kafka and Zookeeper
+  command: kubectl apply -k {{ smb_mount_path }}/k8s/base/kafka/
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Wait for Zookeeper
+  command: kubectl wait --for=condition=ready pod -l app=zookeeper -n {{ k8s_namespace }} --timeout=180s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Wait for Kafka
+  command: kubectl wait --for=condition=ready pod -l app=kafka -n {{ k8s_namespace }} --timeout=300s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Deploy Redis
+  command: kubectl apply -k {{ smb_mount_path }}/k8s/base/redis/
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Wait for Redis
+  command: kubectl wait --for=condition=ready pod -l app=redis -n {{ k8s_namespace }} --timeout=180s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Get Redis pod name
+  command: kubectl get pod -l app=redis -n {{ k8s_namespace }} -o jsonpath='{.items[0].metadata.name}'
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: redis_pod
+  changed_when: false
+
+- name: Verify Redis connectivity
+  command: kubectl exec -n {{ k8s_namespace }} {{ redis_pod.stdout }} -- redis-cli ping
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: redis_ping
+  retries: 3
+  delay: 5
+  until: redis_ping.rc == 0
+  ignore_errors: true
+
+- name: Deploy Prometheus
+  command: kubectl apply -k {{ smb_mount_path }}/k8s/base/prometheus/
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Wait for Prometheus
+  command: kubectl wait --for=condition=ready pod -l app=prometheus -n {{ k8s_namespace }} --timeout=180s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Deploy Ingress
+  command: kubectl apply -f {{ smb_mount_path }}/k8s/base/common/ingress.yaml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  ignore_errors: true
+
+- name: Get all pods status
+  command: kubectl get pods -n {{ k8s_namespace }} -o wide
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: pods_status
+
+- name: Display infrastructure pods status
+  debug:
+    var: pods_status.stdout_lines

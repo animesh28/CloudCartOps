@@ -1,0 +1,9 @@
+---
+# Handlers for jenkins-k8s-access role
+
+- name: Reload systemd and restart Jenkins
+  systemd:
+    daemon_reload: yes
+    name: jenkins
+    state: restarted
+  become: true

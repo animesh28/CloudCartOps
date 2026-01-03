@@ -1,0 +1,78 @@
+---
+# Main playbook for setting up CloudCartOps K3s Infrastructure
+# This playbook installs K3s, Vault, and all infrastructure components
+
+- name: Setup CloudCartOps K3s Infrastructure
+  hosts: k3s
+  become: true
+  gather_facts: true
+  
+  vars:
+    k8s_namespace: cloudcart
+    vault_manifest_path: /tmp/vault-manifests
+    configure_hosts: true
+    
+  pre_tasks:
+    - name: Display playbook information
+      debug:
+        msg:
+          - "==========================================="
+          - "CloudCartOps Infrastructure Setup"
+          - "==========================================="
+          - "Target host: {{ inventory_hostname }}"
+          - "Namespace: {{ namespace }}"
+          - "User: {{ ansible_user }}"
+          - "==========================================="
+    
+  roles:
+    - role: k3s
+      tags: ['k3s', 'setup', 'prerequisites']
+      
+    - role: vault-setup
+      tags: ['vault', 'security']
+      
+    - role: k8s-infrastructure
+      tags: ['infrastructure', 'database', 'messaging', 'monitoring']
+      
+    - role: ingress
+      tags: ['ingress', 'networking']
+
+  post_tasks:
+    - name: Display cluster information
+      debug:
+        msg:
+          - "==========================================="
+          - "K3s Infrastructure Setup Complete!"
+          - "==========================================="
+          - ""
+          - "Cluster Status:"
+          - "  - Namespace: {{ k8s_namespace }}"
+          - "  - Vault: http://vault.cloudcart.local"
+          - "  - Vault Token: root (dev mode)"
+          - "  - Prometheus: http://prometheus.cloudcart.local"
+          - ""
+          - "Deployed Infrastructure Components:"
+          - "  ✓ K3s cluster"
+          - "  ✓ kubectl, helm, kustomize"
+          - "  ✓ Vault Agent Injector"
+          - "  ✓ Vault (dev mode)"
+          - "  ✓ PostgreSQL"
+          - "  ✓ Kafka + Zookeeper"
+          - "  ✓ Redis"
+          - "  ✓ Prometheus"
+          - "  ✓ Ingress configured"
+          - ""
+          - "Next Steps:"
+          - "  1. Verify infrastructure: kubectl get pods -n {{ k8s_namespace }}"
+          - "  2. Configure Jenkins with kubeconfig from: /etc/rancher/k3s/k3s.yaml"
+          - "  3. Run Jenkins deployment pipeline"
+          - "  4. Access applications via ingress"
+          - ""
+          - "==========================================="
+    
+    - name: Save kubeconfig information
+      debug:
+        msg:
+          - "KUBECONFIG is located at: /etc/rancher/k3s/k3s.yaml"
+          - "To use from Jenkins, ensure KUBECONFIG environment variable is set"
+          - "Or copy the file to Jenkins user's home directory"

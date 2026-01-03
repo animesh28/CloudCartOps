@@ -1,0 +1,83 @@
+---
+# Main tasks file for vault-setup role
+
+- name: Add HashiCorp Helm repository
+  command: helm repo add hashicorp https://helm.releases.hashicorp.com
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false
+
+- name: Update Helm repositories
+  command: helm repo update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false
+
+- name: Check if Vault namespace exists
+  command: kubectl get namespace {{ k8s_namespace }}
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: namespace_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Create namespace if not exists
+  command: kubectl create namespace {{ k8s_namespace }}
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: namespace_check.rc != 0
+
+- name: Install Vault Agent Injector via Helm
+  command: >
+    helm upgrade --install vault hashicorp/vault 
+    --namespace {{ k8s_namespace }}
+    --set "injector.enabled=true"
+    --set "injector.externalVaultAddr=http://vault:8200"
+    --set "server.enabled=false"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: helm_install
+  changed_when: "'Release' in helm_install.stdout"
+
+- name: Wait for Vault Agent Injector to be ready
+  command: >
+    kubectl wait --for=condition=ready pod 
+    -l app.kubernetes.io/name=vault-agent-injector 
+    -n {{ k8s_namespace }} --timeout=300s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Verify SMB mount for Vault manifests
+  stat:
+    path: "{{ smb_mount_path }}/k8s/base/vault"
+  register: smb_vault_check
+  failed_when: not smb_vault_check.stat.exists
+
+- name: Deploy Vault StatefulSet using Kustomize
+  command: kubectl apply -k {{ smb_mount_path }}/k8s/base/vault/
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Wait for Vault pod to be ready
+  command: kubectl wait --for=condition=ready pod vault-0 -n {{ k8s_namespace }} --timeout=300s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Copy Vault initialization script
+  copy:
+    src: init-vault.sh
+    dest: /tmp/init-vault.sh
+    mode: '0755'
+
+- name: Initialize Vault with secrets
+  shell: |
+    export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+    /tmp/init-vault.sh
+  args:
+    executable: /bin/bash
+  register: vault_init
+  changed_when: "'Vault initialization complete!' in vault_init.stdout"
+
+- name: Display Vault initialization output
+  debug:
+    var: vault_init.stdout_lines

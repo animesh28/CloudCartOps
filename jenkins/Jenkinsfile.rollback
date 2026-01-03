@@ -1,0 +1,71 @@
+pipeline {
+    agent any
+    
+    parameters {
+        string(
+            name: 'REVISION',
+            defaultValue: '0',
+            description: 'Revision number to rollback to (0 = previous revision)'
+        )
+        choice(
+            name: 'SERVICE',
+            choices: ['all', 'api-gateway', 'user-service', 'product-service', 'order-service', 'notification-worker', 'chaos-service', 'metrics-generator', 'frontend'],
+            description: 'Service to rollback'
+        )
+    }
+    
+    environment {
+        KUBECONFIG = '/home/jenkins/.kube/config'
+        NAMESPACE = 'cloudcart'
+    }
+    
+    stages {
+        stage('Rollback Confirmation') {
+            steps {
+                script {
+                    echo "Rolling back ${params.SERVICE} to revision ${params.REVISION}"
+                    
+                    input message: 'Proceed with rollback?', ok: 'Yes, rollback'
+                }
+            }
+        }
+        
+        stage('Execute Rollback') {
+            steps {
+                script {
+                    if (params.SERVICE == 'all') {
+                        sh '''
+                            kubectl rollout undo deployment/api-gateway -n $NAMESPACE
+                            kubectl rollout undo deployment/user-service -n $NAMESPACE
+                            kubectl rollout undo deployment/product-service -n $NAMESPACE
+                            kubectl rollout undo deployment/order-service -n $NAMESPACE
+                            kubectl rollout undo deployment/notification-worker -n $NAMESPACE
+                            kubectl rollout undo deployment/chaos-service -n $NAMESPACE
+                            kubectl rollout undo deployment/metrics-generator -n $NAMESPACE
+                            kubectl rollout undo deployment/frontend -n $NAMESPACE
+                        '''
+                    } else {
+                        sh """
+                            kubectl rollout undo deployment/${params.SERVICE} -n ${NAMESPACE}
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Verify Rollback') {
+            steps {
+                script {
+                    sh '''
+                        echo "Verifying rollback..."
+                        kubectl get pods -n $NAMESPACE
+                        
+                        sleep 10
+                        
+                        kubectl get pods -n $NAMESPACE -o wide
+                    '''
+                }
+            }
+        }
+    }
+}

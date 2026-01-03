@@ -1,0 +1,110 @@
+---
+# Configure Jenkins VM for K8s cluster access
+
+- name: Install kubectl on Jenkins VM
+  get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}/kubectl"
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+  become: true
+
+- name: Verify kubectl installation
+  command: kubectl version --client
+  changed_when: false
+
+- name: Install Kustomize
+  get_url:
+    url: "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F{{ kustomize_version }}/kustomize_{{ kustomize_version }}_linux_{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}.tar.gz"
+    dest: /tmp/kustomize.tar.gz
+  become: true
+
+- name: Extract Kustomize
+  unarchive:
+    src: /tmp/kustomize.tar.gz
+    dest: /usr/local/bin
+    remote_src: yes
+  become: true
+
+- name: Set Kustomize permissions
+  file:
+    path: /usr/local/bin/kustomize
+    mode: '0755'
+  become: true
+
+- name: Verify Kustomize installation
+  command: kustomize version
+  changed_when: false
+
+- name: Create .kube directory for Jenkins user
+  file:
+    path: "/home/{{ jenkins_user }}/.kube"
+    state: directory
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_user }}"
+    mode: '0755'
+  become: true
+
+- name: Fetch kubeconfig from K3s VM
+  fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /tmp/k3s-kubeconfig.yaml
+    flat: yes
+  delegate_to: "{{ k3s_host }}"
+
+- name: Read kubeconfig content
+  slurp:
+    src: /tmp/k3s-kubeconfig.yaml
+  register: kubeconfig_content
+  delegate_to: localhost
+
+- name: Debug - Show original kubeconfig
+  debug:
+    msg: "Original server: {{ (kubeconfig_content.content | b64decode) | regex_search('server: https://(.+):6443', '\\1') }}"
+
+- name: Update kubeconfig server address
+  set_fact:
+    updated_kubeconfig: "{{ (kubeconfig_content.content | b64decode) | regex_replace('https://127\\.0\\.0\\.1:6443', 'https://' + k3s_vm_ip + ':6443') }}"
+
+- name: Debug - Show updated server address
+  debug:
+    msg: "Updated server will be: https://{{ k3s_vm_ip }}:6443"
+
+- name: Copy updated kubeconfig to Jenkins VM
+  copy:
+    content: "{{ updated_kubeconfig }}"
+    dest: "/home/{{ jenkins_user }}/.kube/config"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_user }}"
+    mode: '0600'
+  become: true
+
+- name: Set KUBECONFIG environment variable in Jenkins user's bashrc
+  lineinfile:
+    path: "/home/{{ jenkins_user }}/.bashrc"
+    line: "export KUBECONFIG=/home/{{ jenkins_user }}/.kube/config"
+    create: yes
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_user }}"
+  become: true
+
+- name: Display verification instructions
+  debug:
+    msg:
+      - "==========================================="
+      - "Kubeconfig installed successfully!"
+      - "==========================================="
+      - ""
+      - "Tools installed:"
+      - "  ✓ kubectl: /usr/local/bin/kubectl"
+      - "  ✓ kustomize: /usr/local/bin/kustomize"
+      - ""
+      - "Kubeconfig location: /home/{{ jenkins_user }}/.kube/config"
+      - "K3s cluster: https://{{ k3s_vm_ip }}:6443"
+      - ""
+      - "To verify, run on Jenkins VM:"
+      - "  sudo su - {{ jenkins_user }}"
+      - "  kubectl get nodes"
+      - "  kubectl get pods -n cloudcart"
+      - "  kustomize version"
+      - ""
+      - "==========================================="

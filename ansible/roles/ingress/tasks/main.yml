@@ -1,0 +1,40 @@
+---
+# Main tasks file for ingress role
+
+- name: Check if Traefik ingress controller is installed
+  command: kubectl get svc -n kube-system
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: ingress_check
+  changed_when: false
+
+- name: Display ingress controller status
+  debug:
+    msg: "{{ 'Traefik ingress controller found' if 'traefik' in ingress_check.stdout else 'No ingress controller detected' }}"
+
+- name: Configure /etc/hosts entries for local access
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      127.0.0.1 cloudcart.local
+      127.0.0.1 api.cloudcart.local
+      127.0.0.1 prometheus.cloudcart.local
+      127.0.0.1 vault.cloudcart.local
+    marker: "# {mark} CLOUDCART ANSIBLE MANAGED BLOCK"
+    create: true
+  become: true
+  when: configure_hosts | default(true)
+
+- name: Display ingress access information
+  debug:
+    msg:
+      - "Ingress configuration complete!"
+      - ""
+      - "Access points:"
+      - "  - Frontend: http://cloudcart.local"
+      - "  - API: http://api.cloudcart.local"
+      - "  - Prometheus: http://prometheus.cloudcart.local"
+      - "  - Vault UI: http://vault.cloudcart.local"
+      - ""
+      - "Note: Make sure to add these entries to your local machine's /etc/hosts file:"
+      - "  <VM_IP> cloudcart.local api.cloudcart.local prometheus.cloudcart.local vault.cloudcart.local"

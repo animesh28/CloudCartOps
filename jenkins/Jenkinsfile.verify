@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+    
+    environment {
+        KUBECONFIG = '/home/jenkins/.kube/config'
+        NAMESPACE = 'cloudcart'
+    }
+    
+    stages {
+        stage('Verify K3s Cluster') {
+            steps {
+                script {
+                    sh '''
+                        kubectl cluster-info
+                        kubectl get nodes
+                    '''
+                }
+            }
+        }
+        
+        stage('Verify Infrastructure Pods') {
+            steps {
+                script {
+                    sh '''
+                        echo "Checking infrastructure components..."
+                        kubectl get pods -n $NAMESPACE
+                        
+                        # Check Vault
+                        kubectl wait --for=condition=ready pod vault-0 -n $NAMESPACE --timeout=60s
+                        
+                        # Check PostgreSQL
+                        kubectl wait --for=condition=ready pod postgres-0 -n $NAMESPACE --timeout=60s
+                        
+                        # Check Kafka
+                        kubectl wait --for=condition=ready pod -l app=kafka -n $NAMESPACE --timeout=60s
+                        
+                        # Check Redis
+                        kubectl wait --for=condition=ready pod -l app=redis -n $NAMESPACE --timeout=60s
+                        
+                        echo "✓ All infrastructure components are ready!"
+                    '''
+                }
+            }
+        }
+        
+        stage('Verify Vault Configuration') {
+            steps {
+                script {
+                    sh '''
+                        # Check if Vault is initialized
+                        kubectl exec -n $NAMESPACE vault-0 -- vault status || true
+                        
+                        # Verify secrets exist
+                        kubectl exec -n $NAMESPACE vault-0 -- \
+                            vault kv get cloudcart/database || \
+                            echo "WARNING: Database secrets not found"
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✓ Infrastructure verification passed!'
+        }
+        failure {
+            echo '✗ Infrastructure verification failed!'
+            sh 'kubectl get pods -n $NAMESPACE'
+            sh 'kubectl get events -n $NAMESPACE --sort-by=.lastTimestamp | tail -20'
+        }
+    }
+}
