@@ -12,6 +12,29 @@
   command: kubectl version --client
   changed_when: false
 
+- name: Install Kustomize
+  get_url:
+    url: "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F{{ kustomize_version }}/kustomize_{{ kustomize_version }}_linux_{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}.tar.gz"
+    dest: /tmp/kustomize.tar.gz
+  become: true
+
+- name: Extract Kustomize
+  unarchive:
+    src: /tmp/kustomize.tar.gz
+    dest: /usr/local/bin
+    remote_src: yes
+  become: true
+
+- name: Set Kustomize permissions
+  file:
+    path: /usr/local/bin/kustomize
+    mode: '0755'
+  become: true
+
+- name: Verify Kustomize installation
+  command: kustomize version
+  changed_when: false
+
 - name: Create .kube directory for Jenkins user
   file:
     path: "/home/{{ jenkins_user }}/.kube"
@@ -71,6 +94,10 @@
       - "Kubeconfig installed successfully!"
       - "==========================================="
       - ""
+      - "Tools installed:"
+      - "  ✓ kubectl: /usr/local/bin/kubectl"
+      - "  ✓ kustomize: /usr/local/bin/kustomize"
+      - ""
       - "Kubeconfig location: /home/{{ jenkins_user }}/.kube/config"
       - "K3s cluster: https://{{ k3s_vm_ip }}:6443"
       - ""
@@ -78,5 +105,6 @@
       - "  sudo su - {{ jenkins_user }}"
       - "  kubectl get nodes"
       - "  kubectl get pods -n cloudcart"
+      - "  kustomize version"
       - ""
       - "==========================================="
