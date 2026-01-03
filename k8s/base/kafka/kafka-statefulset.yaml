@@ -44,11 +44,11 @@ spec:
           mountPath: /var/lib/kafka
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "256Mi"
+            cpu: "200m"
           limits:
-            memory: "1Gi"
-            cpu: "1000m"
+            memory: "512Mi"
+            cpu: "400m"
   volumeClaimTemplates:
   - metadata:
       name: kafka-data
