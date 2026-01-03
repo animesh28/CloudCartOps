@@ -42,16 +42,50 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/resources/requests/memory
-        value: "128Mi"
+        value: "64Mi"
       - op: replace
         path: /spec/template/spec/containers/0/resources/limits/memory
-        value: "256Mi"
+        value: "128Mi"
       - op: replace
         path: /spec/template/spec/containers/0/resources/requests/cpu
-        value: "100m"
+        value: "50m"
       - op: replace
         path: /spec/template/spec/containers/0/resources/limits/cpu
-        value: "250m"
+        value: "150m"
     target:
       kind: Deployment
       labelSelector: "app in (api-gateway,user-service,product-service,order-service)"
+  
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "32Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "64Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "25m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "100m"
+    target:
+      kind: Deployment
+      labelSelector: "app in (notification-worker,chaos-service,metrics-generator)"
+  
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "32Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "64Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "25m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "100m"
+    target:
+      kind: Deployment
+      name: frontend
